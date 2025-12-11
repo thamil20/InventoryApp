@@ -13,12 +13,12 @@
 
 .inventory-header h2 {
   font-size: 2rem;
-  color: #282c34;
+  color: #ffffff;
   margin: 0;
 }
 
 .inventory-table-wrapper {
-  background: white;
+  background: rgba(185, 185, 185, 0.747);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -57,12 +57,12 @@
 
 .inventory-table td {
   padding: 1rem;
-  color: #333;
+  color: #000000;
 }
 
 .inventory-table td:first-child {
   font-weight: 600;
-  color: #667eea;
+  color: #1a1a1a;
 }
 
 .action-buttons {
@@ -86,7 +86,7 @@
 }
 
 .btn-update:hover {
-  background-color: #5568d3;
+  background-color: #3a4792;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
@@ -97,7 +97,7 @@
 }
 
 .btn-delete:hover {
-  background-color: #ff5252;
+  background-color: #d83e3e;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
 }
@@ -105,7 +105,9 @@
 .empty-state {
   text-align: center;
   padding: 3rem 2rem;
-  color: #999;
+  font-weight: 500;
+  font-style: italic;
+  color: #000000;
 }
 
 .empty-state p {

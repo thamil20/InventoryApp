@@ -2,11 +2,11 @@ import {useState} from 'react'
 import './AddItemForm.css'
 
 const AddItemForm = ({ }) => {
-    const [name, setName] = useState('')
+    const [name, setName] = useState('Name')
     const [quantity, setQuantity] = useState(0)
     const [price, setPrice] = useState(0.0)
-    const [description, setDescription] = useState('')
-    const [category, setCategory] = useState('')
+    const [description, setDescription] = useState('Description')
+    const [category, setCategory] = useState('Category')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [successMessage, setSuccessMessage] = useState('')
 

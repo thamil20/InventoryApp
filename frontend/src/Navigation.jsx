@@ -5,7 +5,7 @@ function Navigation() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">Inventory App</Link>
+        <Link to="/" className="nav-logo">Inventory</Link>
         <ul className="nav-menu">
           <li className="nav-item">
             <Link to="/" className="nav-link">Dashboard</Link>

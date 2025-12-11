@@ -10,12 +10,12 @@
 
 .form-header h2 {
   font-size: 2rem;
-  color: #282c34;
+  color: #ffffff;
   margin: 0;
 }
 
 .form-card {
-  background: white;
+  background: rgba(185, 185, 185, 0.747);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 2rem;

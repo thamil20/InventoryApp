@@ -1,9 +1,10 @@
 .navbar {
-  background-color: #282c34;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
   padding: 0.5rem 0;
   position: sticky;
   top: 0;
-  z-index: 0;
+  z-index: 100;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -18,14 +19,14 @@
 }
 
 .nav-logo {
-  color: #61dafb;
+  color: #ffffff;
   font-size: 1.2rem;
-  font-weight: bold;
+  font-weight: none;
   text-decoration: none;
 }
 
 .nav-logo:hover {
-  color: #4fa8c5;
+  color: #bfe9ff;
 }
 
 .nav-menu {
@@ -48,5 +49,5 @@
 }
 
 .nav-link:hover {
-  color: #61dafb;
+  color: #bfe9ff;
 }
