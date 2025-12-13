@@ -1,0 +1,20 @@
+[Unit]
+Description=InventoryApp Gunicorn Service
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/inventoryapp/backend
+Environment="PATH=/var/www/inventoryapp/venv/bin"
+ExecStart=/var/www/inventoryapp/venv/bin/gunicorn -c gunicorn_config.py main:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,19 +1,25 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from config import app, db
+from config import app, db, limiter
 from models import Current_Inventory, Sold_Items, User
+from schemas import (
+    validate_request, UserRegistrationSchema, UserLoginSchema,
+    InventoryItemSchema, ItemUpdateSchema, SoldItemSchema,
+    ExpensesUpdateSchema, ForgotPasswordSchema
+)
 from datetime import datetime
 from sqlalchemy import func
+import os
 
 # JWT error handlers
 @app.errorhandler(422)
 def handle_unprocessable_entity(e):
-    print(f"422 Error: {str(e)}")
+    app.logger.error(f"422 Error: {str(e)}")
     return jsonify({"error": "Unprocessable Entity", "details": str(e)}), 422
 
 @app.errorhandler(401)
 def handle_unauthorized(e):
-    print(f"401 Error: {str(e)}")
+    app.logger.warning(f"401 Error: {str(e)}")
     return jsonify({"error": "Unauthorized", "details": str(e)}), 401
 
 @app.route('/')
@@ -25,17 +31,15 @@ def home():
 
 # Authentication routes
 @app.route('/auth/register', methods=['POST'])
+@limiter.limit("3 per hour")
+@validate_request(UserRegistrationSchema)
 def register():
-    username = request.json.get('username')
-    password = request.json.get('password')
-    email = request.json.get('email')
-    phone = request.json.get('phone')
-
-    if not username or not password or not email:
-        return (
-            jsonify({"error": "Missing required fields (username, password, email)"}), 
-            400,
-        )
+    data = request.validated_data
+    app.logger.debug(f"Registration data validated: {data}")
+    username = data['username']
+    password = data['password']
+    email = data['email']
+    phone = data.get('phone')
     
     # Check if user already exists
     if User.query.filter_by(username=username).first():
@@ -79,15 +83,12 @@ def register():
     )
 
 @app.route('/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
+@validate_request(UserLoginSchema)
 def login():
-    username = request.json.get('username')
-    password = request.json.get('password')
-
-    if not username or not password:
-        return (
-            jsonify({"error": "Missing username or password"}), 
-            400,
-        )
+    data = request.validated_data
+    username = data['username']
+    password = data['password']
     
     user = User.query.filter_by(username=username).first()
     
@@ -119,6 +120,44 @@ def logout():
         200,
     )
 
+@app.route('/auth/forgot-password', methods=['POST'])
+@limiter.limit("3 per hour")
+@validate_request(ForgotPasswordSchema)
+def forgot_password():
+    """
+    Password reset endpoint (basic implementation)
+    NOTE: This is a basic implementation that returns a success message.
+    For production, you should:
+    1. Generate a secure reset token
+    2. Store it with expiration in database
+    3. Send email with reset link
+    4. Implement token verification and password update endpoint
+    """
+    data = request.validated_data
+    email = data['email']
+    
+    # Check if user exists with this email
+    user = User.query.filter_by(email=email).first()
+    
+    # Always return success to prevent email enumeration attacks
+    # In production, send actual email only if user exists
+    if user:
+        app.logger.info(f"Password reset requested for user: {user.username}")
+        # TODO: Generate reset token and send email
+        # token = secrets.token_urlsafe(32)
+        # Save token to database with expiration
+        # Send email with reset link containing token
+    else:
+        app.logger.info(f"Password reset requested for non-existent email: {email}")
+    
+    # Always return success message (security best practice)
+    return (
+        jsonify({
+            "message": "If an account exists with this email, a password reset link has been sent."
+        }),
+        200,
+    )
+
 @app.route('/auth/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
@@ -142,16 +181,16 @@ def get_current_user():
 def get_current_inventory():
     try:
         user_id = int(get_jwt_identity())
-        print(f"Get inventory - User ID from JWT: {user_id}")  # Debug log
+        app.logger.debug(f"Get inventory - User ID from JWT: {user_id}")
         current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
-        print(f"Found {len(current_inventory)} items for user {user_id}")  # Debug log
+        app.logger.debug(f"Found {len(current_inventory)} items for user {user_id}")
         json_inventory = list(map(lambda item: item.to_json(), current_inventory))
         return (
                 jsonify({"current_inventory":json_inventory}), 
                 200,
             )
     except Exception as e:
-        print(f"Error getting inventory: {str(e)}")  # Debug log
+        app.logger.error(f"Error getting inventory: {str(e)}")
         return (
             jsonify({"error": "Failed to get inventory", "details": str(e)}), 
             500,
@@ -170,27 +209,17 @@ def get_sold_items():
 
 @app.route('/inventory/create_item', methods=['POST'])
 @jwt_required()
+@validate_request(InventoryItemSchema)
 def create_item():
     user_id = int(get_jwt_identity())
-    print(f"User ID from JWT: {user_id}")  # Debug log
-    print(f"Request data: {request.json}")  # Debug log
-    
-    name = request.json.get('name')
-    quantity = request.json.get('quantity')
-    price = request.json.get('price')
-    description = request.json.get('description')
-    category = request.json.get('category')
-
-    if not name or quantity is None or price is None:
-        return (
-            jsonify({"error": "Missing required fields"}), 
-            400,
-        )
+    data = request.validated_data
+    app.logger.debug(f"User ID from JWT: {user_id}")
+    app.logger.debug(f"Request data: {data}")
     
     # Verify user exists
     user = User.query.get(user_id)
     if not user:
-        print(f"User with ID {user_id} not found in database")
+        app.logger.warning(f"User with ID {user_id} not found in database")
         return (
             jsonify({"error": "User not found"}), 
             404,
@@ -205,11 +234,11 @@ def create_item():
     new_item = Current_Inventory(
         user_id=user_id,
         item_id=next_item_id,
-        name=name,
-        quantity=quantity,
-        price=price,
-        description=description,
-        category=category,
+        name=data['name'],
+        quantity=data['quantity'],
+        price=data['price'],
+        description=data.get('description'),
+        category=data.get('category'),
         added_date=datetime.now(),
     )
 
@@ -218,7 +247,7 @@ def create_item():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating item: {str(e)}")  # Log to console
+        app.logger.error(f"Error creating item: {str(e)}")
         return (
             jsonify({"error": "Failed to create item", "details": str(e)}), 
             422,
@@ -422,7 +451,7 @@ def get_finances():
             200,
         )
     except Exception as e:
-        print(f"Error getting finances: {str(e)}")
+        app.logger.error(f"Error getting finances: {str(e)}")
         return (
             jsonify({"error": "Failed to get finances", "details": str(e)}),
             500,
@@ -460,7 +489,7 @@ def update_expenses():
             200,
         )
     except Exception as e:
-        print(f"Error updating expenses: {str(e)}")
+        app.logger.error(f"Error updating expenses: {str(e)}")
         return (
             jsonify({"error": "Failed to update expenses", "details": str(e)}),
             500,
@@ -510,7 +539,7 @@ def get_dashboard():
             200,
         )
     except Exception as e:
-        print(f"Error getting dashboard data: {str(e)}")
+        app.logger.error(f"Error getting dashboard data: {str(e)}")
         return (
             jsonify({"error": "Failed to get dashboard data", "details": str(e)}),
             500,
@@ -519,5 +548,14 @@ def get_dashboard():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-
-    app.run(debug=True, port=5000)
+        app.logger.info("Database tables created successfully")
+    
+    # Only use development server for local development
+    # For production, use Gunicorn: gunicorn -c gunicorn_config.py main:app
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    
+    if debug:
+        app.logger.warning("Running in DEBUG mode - DO NOT use in production!")
+    
+    app.run(debug=debug, port=port, host='127.0.0.1')

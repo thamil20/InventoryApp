@@ -1,0 +1,46 @@
+# InventoryApp Backend Dependencies
+# Generated for Python 3.14
+# Production-ready with pinned versions
+
+# Core Framework
+Flask==3.1.2
+Werkzeug==3.1.4
+
+# Database
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.45
+greenlet==3.3.0
+psycopg2-binary==2.9.9
+
+# Authentication & Security
+Flask-JWT-Extended==4.7.1
+PyJWT==2.10.1
+Flask-Bcrypt==1.0.1
+bcrypt==5.0.0
+
+# CORS
+flask-cors==6.0.1
+
+# Environment & Configuration
+python-dotenv==1.2.1
+
+# Timezone Support
+pytz==2025.2
+
+# Production WSGI Server
+gunicorn==23.0.0
+
+# Rate Limiting
+Flask-Limiter==3.8.0
+
+# Input Validation
+marshmallow==3.23.2
+
+# Utilities
+click==8.3.1
+colorama==0.4.6
+blinker==1.9.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+typing_extensions==4.15.0
