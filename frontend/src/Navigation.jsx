@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import './Navigation.css'
+import icon from './assets/icon.webp'
 
 function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -9,7 +10,7 @@ function Navigation() {
     <nav className="navbar">
       <div className="nav-container">
         <Link to="/" className="nav-logo">
-          <div className="logo-box"></div>
+          <img src={icon} alt="Logo" className="logo-icon" />
         </Link>
         <ul className="nav-menu">
           <li className="nav-item">

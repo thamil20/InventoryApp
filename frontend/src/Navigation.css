@@ -11,7 +11,7 @@
 }
 
 .nav-container {
-  width: 100%;
+  width: 98%;
   padding: 0 2rem;
   display: flex;
   justify-content: space-between;
@@ -21,21 +21,20 @@
 
 .nav-logo {
   display: flex;
-  align-items: center;
+  align-items: left;
   text-decoration: none;
   margin-right: 3rem;
 }
 
-.logo-box {
-  width: 35px;
-  height: 35px;
-  background-color: #ffffff;
+.logo-icon {
+  width: 65px;
+  height: 45px;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
-.nav-logo:hover .logo-box {
-  background-color: #bfe9ff;
+.nav-logo:hover .logo-icon {
+  opacity: 0.8;
 }
 
 .nav-menu {
@@ -53,8 +52,10 @@
   list-style: none;
   gap: 1.5rem;
   margin: 0;
-  padding: 0;
+  padding-right: 20px;
   margin-left: 3rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .nav-item {
