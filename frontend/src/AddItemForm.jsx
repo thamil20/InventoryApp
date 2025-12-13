@@ -2,11 +2,11 @@ import {useState} from 'react'
 import './AddItemForm.css'
 
 const AddItemForm = ({ }) => {
-    const [name, setName] = useState('Name')
-    const [quantity, setQuantity] = useState(0)
-    const [price, setPrice] = useState(0.0)
-    const [description, setDescription] = useState('Description')
-    const [category, setCategory] = useState('Category')
+    const [name, setName] = useState('')
+    const [quantity, setQuantity] = useState('')
+    const [price, setPrice] = useState('')
+    const [description, setDescription] = useState('')
+    const [category, setCategory] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [successMessage, setSuccessMessage] = useState('')
 
@@ -14,8 +14,8 @@ const AddItemForm = ({ }) => {
         e.preventDefault()
         const data = {
             name,
-            quantity,
-            price,
+            quantity: parseInt(quantity, 10),
+            price: parseFloat(price),
             description,
             category
         }
@@ -24,6 +24,7 @@ const AddItemForm = ({ }) => {
         const options = {
             method: 'POST',
             headers: {
+                'Access-Control-Allow-Origin': 'http://localhost:5137',
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(data),
@@ -33,8 +34,8 @@ const AddItemForm = ({ }) => {
         try {
             const response = await fetch(url, options)
             if (response.status !== 201 && response.status !== 200) {
-                const message = await response.json()
-                alert(message.message || 'Failed to add item')
+                const errorData = await response.json()
+                alert('Error: ' + (errorData.error || errorData.details || 'Unknown error'))
             }
             else {
                 setSuccessMessage('Item added successfully')

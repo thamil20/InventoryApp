@@ -24,7 +24,6 @@ class User(db.Model):
 class Current_Inventory(db.Model):
     __tablename__ = "current_inventory"
     item_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=False, nullable=False)
     name = db.Column(db.String(100), unique=False, nullable=False)
     quantity = db.Column(db.Integer, unique=False, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
@@ -36,7 +35,6 @@ class Current_Inventory(db.Model):
     def to_json(self):
         return {
             "itemId": self.item_id,
-            "userId": self.user_id,
             "name": self.name,
             "quantity": self.quantity,
             "price": self.price,
@@ -51,7 +49,6 @@ class Sold_Items(db.Model):
     sold_item_id = db.Column(db.Integer, primary_key=True)
     # keep reference to the original inventory item (optional)
     original_item_id = db.Column(db.Integer, db.ForeignKey('current_inventory.item_id'), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     # snapshot of the item at time of sale (duplicate on sale)
     name = db.Column(db.String(100), nullable=False)
@@ -70,7 +67,6 @@ class Sold_Items(db.Model):
         return {
             "soldItemId": self.sold_item_id,
             "originalItemId": self.original_item_id,
-            "userId": self.user_id,
             "name": self.name,
             "quantity": self.quantity,
             "price": self.price,
