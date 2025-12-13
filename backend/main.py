@@ -273,6 +273,11 @@ def sell_item(item_id):
     try:
         item.quantity -= quantity_sold
         db.session.add(sold_item)
+        
+        # If all items are sold, delete the item from inventory
+        if item.quantity == 0:
+            db.session.delete(item)
+        
         db.session.commit()
     except Exception as e:
         return (
@@ -304,6 +309,10 @@ def update_item(item_id):
     item.category = data.get("category", item.category)
 
     try:
+        # If quantity is 0, delete the item
+        if item.quantity == 0:
+            db.session.delete(item)
+        
         db.session.commit()
     except Exception as e:
         return (

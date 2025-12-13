@@ -1,7 +1,7 @@
 .inventory-container {
-  max-width: 95%;
+  max-width: 100%;
   margin: 2rem auto;
-  width: 95%;
+  width: 97%;
   padding: 0 1rem;
 }
 
@@ -76,6 +76,14 @@
   cursor: help;
 }
 
+/* Actions column should be wider and not truncated */
+.inventory-table td:last-child {
+  max-width: none;
+  min-width: 280px;
+  overflow: visible;
+  text-align: left;
+}
+
 .inventory-table td:first-child {
   font-weight: 600;
   color: #1a1a1a;
@@ -83,7 +91,8 @@
 
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0rem;
+  justify-content: flex-start;
 }
 
 .btn {

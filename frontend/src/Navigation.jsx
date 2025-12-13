@@ -27,10 +27,10 @@ function Navigation() {
               <Link to="/inventory/current" className="nav-link">Current Inventory</Link>
             </li>
             <li className="nav-item">
-              <Link to="/inventory/sold" className="nav-link">Sold Items</Link>
+              <Link to="/inventory/create_item" className="nav-link">Add Item</Link>
             </li>
             <li className="nav-item">
-              <Link to="/inventory/create_item" className="nav-link">Add Item</Link>
+              <Link to="/inventory/sold" className="nav-link">Sold Items</Link>
             </li>
           </ul>
         )}
