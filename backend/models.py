@@ -10,6 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     phone = db.Column(db.String(15), unique=False, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone('UTC')))
+    expenses = db.Column(db.Float, default=0.0, nullable=False)
     
     def set_password(self, password):
         """Hash and set the user's password"""
@@ -25,7 +26,8 @@ class User(db.Model):
             "username": self.username,
             "email": self.email,
             "phone": self.phone,
-            "createdAt": self.created_at.isoformat()
+            "createdAt": self.created_at.isoformat(),
+            "expenses": self.expenses
         }
 
 # Define the Item model for the inventory management system

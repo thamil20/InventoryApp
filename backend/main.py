@@ -363,6 +363,159 @@ def renumber_items():
     except Exception as e:
         return jsonify({"error": "Failed to renumber items", "details": str(e)}), 500
 
+@app.route('/finances', methods=['GET'])
+@jwt_required()
+def get_finances():
+    try:
+        user_id = int(get_jwt_identity())
+        
+        # Get user to retrieve expenses
+        user = User.query.get(user_id)
+        if not user:
+            return (
+                jsonify({"error": "User not found"}),
+                404,
+            )
+        
+        # Get all sold items for the user
+        sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
+        
+        # Calculate total revenue from sold items
+        total_revenue = sum(item.sale_price * item.quantity_sold for item in sold_items)
+        
+        # Get current inventory
+        current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
+        
+        # Calculate potential revenue from current inventory
+        potential_revenue = sum(item.price * item.quantity for item in current_inventory)
+        
+        # Calculate daily sales for the last 7 days
+        from datetime import timedelta
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_sales = []
+        
+        for i in range(6, -1, -1):  # 6 days ago to today
+            day = today - timedelta(days=i)
+            next_day = day + timedelta(days=1)
+            
+            # Get sales for this specific day
+            day_revenue = db.session.query(
+                func.sum(Sold_Items.sale_price * Sold_Items.quantity_sold)
+            ).filter(
+                Sold_Items.user_id == user_id,
+                Sold_Items.sale_date >= day,
+                Sold_Items.sale_date < next_day
+            ).scalar() or 0
+            
+            daily_sales.append({
+                "date": day.strftime('%Y-%m-%d'),
+                "revenue": float(day_revenue)
+            })
+        
+        return (
+            jsonify({
+                "totalRevenue": float(total_revenue),
+                "potentialRevenue": float(potential_revenue),
+                "expenses": float(user.expenses),
+                "dailySales": daily_sales
+            }),
+            200,
+        )
+    except Exception as e:
+        print(f"Error getting finances: {str(e)}")
+        return (
+            jsonify({"error": "Failed to get finances", "details": str(e)}),
+            500,
+        )
+
+@app.route('/finances/expenses', methods=['PATCH'])
+@jwt_required()
+def update_expenses():
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return (
+                jsonify({"error": "User not found"}),
+                404,
+            )
+        
+        expenses = request.json.get('expenses')
+        
+        if expenses is None:
+            return (
+                jsonify({"error": "Expenses value is required"}),
+                400,
+            )
+        
+        user.expenses = float(expenses)
+        db.session.commit()
+        
+        return (
+            jsonify({
+                "message": "Expenses updated successfully",
+                "expenses": user.expenses
+            }),
+            200,
+        )
+    except Exception as e:
+        print(f"Error updating expenses: {str(e)}")
+        return (
+            jsonify({"error": "Failed to update expenses", "details": str(e)}),
+            500,
+        )
+
+@app.route('/dashboard', methods=['GET'])
+@jwt_required()
+def get_dashboard():
+    try:
+        user_id = int(get_jwt_identity())
+        
+        # Get user for expenses
+        user = User.query.get(user_id)
+        if not user:
+            return (
+                jsonify({"error": "User not found"}),
+                404,
+            )
+        
+        # Get 5 most recently added inventory items
+        recent_inventory = Current_Inventory.query.filter_by(user_id=user_id)\
+            .order_by(Current_Inventory.added_date.desc())\
+            .limit(5)\
+            .all()
+        
+        # Get 5 most recently sold items
+        recent_sold = Sold_Items.query.filter_by(user_id=user_id)\
+            .order_by(Sold_Items.sale_date.desc())\
+            .limit(5)\
+            .all()
+        
+        # Calculate total revenue
+        all_sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
+        total_revenue = sum(item.sale_price * item.quantity_sold for item in all_sold_items)
+        
+        # Calculate profit
+        profit = total_revenue - user.expenses
+        
+        return (
+            jsonify({
+                "recentInventory": [item.to_json() for item in recent_inventory],
+                "recentSold": [item.to_json() for item in recent_sold],
+                "profit": float(profit),
+                "totalRevenue": float(total_revenue),
+                "expenses": float(user.expenses)
+            }),
+            200,
+        )
+    except Exception as e:
+        print(f"Error getting dashboard data: {str(e)}")
+        return (
+            jsonify({"error": "Failed to get dashboard data", "details": str(e)}),
+            500,
+        )
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

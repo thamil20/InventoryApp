@@ -32,6 +32,9 @@ function Navigation() {
             <li className="nav-item">
               <Link to="/inventory/sold" className="nav-link">Sold Items</Link>
             </li>
+            <li className="nav-item">
+              <Link to="/finances" className="nav-link">Finances</Link>
+            </li>
           </ul>
         )}
         <ul className="nav-auth">

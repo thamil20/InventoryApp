@@ -6,6 +6,7 @@ import Dashboard from './Dashboard.jsx'
 import CurrentInventoryList from './CurrentInventoryList.jsx'
 import SoldItemsList from './SoldItemsList.jsx'
 import AddItemForm from './AddItemForm.jsx'
+import Finances from './Finances.jsx'
 import Login from './Login.jsx'
 import Register from './Register.jsx'
 import ForgotPassword from './ForgotPassword.jsx'
@@ -63,6 +64,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AddItemForm />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/finances" 
+            element={
+              <ProtectedRoute>
+                <Finances />
               </ProtectedRoute>
             } 
           />
