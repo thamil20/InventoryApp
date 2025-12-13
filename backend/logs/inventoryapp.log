@@ -56,3 +56,6 @@
 2025-12-13 16:13:37,881 INFO: InventoryApp starting in development mode [in C:\Users\hamil\InventoryApp\backend\config.py:115]
 2025-12-13 16:13:38,019 INFO: Database tables created successfully [in C:\Users\hamil\InventoryApp\backend\main.py:513]
 2025-12-13 16:13:38,020 WARNING: Running in DEBUG mode - DO NOT use in production! [in C:\Users\hamil\InventoryApp\backend\main.py:521]
+2025-12-13 16:14:11,778 INFO: InventoryApp starting in development mode [in C:\Users\hamil\InventoryApp\backend\config.py:115]
+2025-12-13 16:14:11,928 INFO: Database tables created successfully [in C:\Users\hamil\InventoryApp\backend\main.py:551]
+2025-12-13 16:14:11,928 WARNING: Running in DEBUG mode - DO NOT use in production! [in C:\Users\hamil\InventoryApp\backend\main.py:559]
