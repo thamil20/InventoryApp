@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # CORS configuration
 allowed_origins = os.getenv('ALLOWED_ORIGINS').split(',')
-CORS(app, resources={r"/inventory/*": {"origins": allowed_origins}})
+CORS(app, resources={r"/inventory/*": {"origins": allowed_origins}}, supports_credentials=True)
 
 # Database configuration
 database_url = os.getenv('DATABASE_URL')
