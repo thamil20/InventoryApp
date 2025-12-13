@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './AuthContext'
 import Navigation from './Navigation.jsx'
 import Dashboard from './Dashboard.jsx'
 import CurrentInventoryList from './CurrentInventoryList.jsx'
+import SoldItemsList from './SoldItemsList.jsx'
 import AddItemForm from './AddItemForm.jsx'
 import Login from './Login.jsx'
 import Register from './Register.jsx'
@@ -46,6 +47,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <CurrentInventoryList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/inventory/sold" 
+            element={
+              <ProtectedRoute>
+                <SoldItemsList />
               </ProtectedRoute>
             } 
           />

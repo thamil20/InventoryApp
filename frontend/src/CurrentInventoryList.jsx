@@ -8,13 +8,20 @@ const CurrentInventoryList = () => {
     const [selectedItem, setSelectedItem] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isSellModalOpen, setIsSellModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
+    const [sellingItem, setSellingItem] = useState(null)
     const [editForm, setEditForm] = useState({
         name: '',
         quantity: '',
         price: '',
         description: '',
         category: ''
+    })
+    const [sellForm, setSellForm] = useState({
+        quantity_sold: '',
+        sale_price: '',
+        sale_date: new Date().toISOString().split('T')[0]
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -104,8 +111,32 @@ const CurrentInventoryList = () => {
         })
     }
 
+    const openSellModal = (item) => {
+        setSellingItem(item)
+        setSellForm({
+            quantity_sold: '',
+            sale_price: item.price,
+            sale_date: new Date().toISOString().split('T')[0]
+        })
+        setIsSellModalOpen(true)
+    }
+
+    const closeSellModal = () => {
+        setIsSellModalOpen(false)
+        setSellingItem(null)
+        setSellForm({
+            quantity_sold: '',
+            sale_price: '',
+            sale_date: new Date().toISOString().split('T')[0]
+        })
+    }
+
     const handleEditChange = (field, value) => {
         setEditForm(prev => ({ ...prev, [field]: value }))
+    }
+
+    const handleSellChange = (field, value) => {
+        setSellForm(prev => ({ ...prev, [field]: value }))
     }
 
     const handleUpdateSubmit = async (e) => {
@@ -146,6 +177,51 @@ const CurrentInventoryList = () => {
         }
     }
 
+    const handleSellSubmit = async (e) => {
+        e.preventDefault()
+        setIsSubmitting(true)
+
+        const quantitySold = parseInt(sellForm.quantity_sold, 10)
+        
+        if (quantitySold > sellingItem.quantity) {
+            alert(`Cannot sell ${quantitySold} items. Only ${sellingItem.quantity} available in inventory.`)
+            setIsSubmitting(false)
+            return
+        }
+
+        const data = {
+            quantity_sold: quantitySold,
+            sale_price: parseFloat(sellForm.sale_price),
+            sale_date: new Date(sellForm.sale_date).toISOString()
+        }
+
+        const url = `${import.meta.env.VITE_API_URL}/inventory/sell_item/${sellingItem.itemId}`
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+        }
+
+        try {
+            const response = await fetch(url, options)
+            if (response.ok) {
+                await fetchCurrentInventory()
+                closeSellModal()
+                alert('Item sold successfully!')
+            } else {
+                const errorData = await response.json()
+                alert('Error: ' + (errorData.error || errorData.details || 'Unknown error'))
+            }
+        } catch (err) {
+            alert('Error selling item: ' + err)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     return <div className="inventory-container">
         <div className="inventory-header">
             <h2>Current Inventory</h2>
@@ -181,6 +257,7 @@ const CurrentInventoryList = () => {
                                 <td title={formatDate(item.addedDate)}>{formatDate(item.addedDate)}</td>
                                 <td onClick={(e) => e.stopPropagation()}>
                                     <div className="action-buttons">
+                                        <button className="btn btn-sell" onClick={() => openSellModal(item)}>Sell</button>
                                         <button className="btn btn-update" onClick={() => openEditModal(item)}>Update</button>
                                         <button className="btn btn-delete" onClick={() => deleteItem(item.itemId)}>Delete</button>
                                     </div>
@@ -301,6 +378,65 @@ const CurrentInventoryList = () => {
                                 <button type="button" className="btn btn-cancel" onClick={closeEditModal}>Cancel</button>
                                 <button type="submit" className="btn btn-save" disabled={isSubmitting}>
                                     {isSubmitting ? 'Updating...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {isSellModalOpen && sellingItem && (
+            <div className="modal-overlay" onClick={closeSellModal}>
+                <div className="modal-content edit-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h3>Sell Item: {sellingItem.name}</h3>
+                        <button className="modal-close" onClick={closeSellModal}>&times;</button>
+                    </div>
+                    <div className="modal-body">
+                        <form onSubmit={handleSellSubmit}>
+                            <div className="form-group">
+                                <label htmlFor="sell-quantity">Quantity to Sell</label>
+                                <input 
+                                    type="number" 
+                                    id="sell-quantity" 
+                                    min="1"
+                                    max={sellingItem.quantity}
+                                    value={sellForm.quantity_sold} 
+                                    onChange={(e) => handleSellChange('quantity_sold', e.target.value)} 
+                                    required 
+                                />
+                                <small>Available: {sellingItem.quantity}</small>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="sell-price">Sale Price</label>
+                                <input 
+                                    type="number" 
+                                    id="sell-price" 
+                                    step="0.01"
+                                    min="0.01" 
+                                    value={sellForm.sale_price} 
+                                    onChange={(e) => handleSellChange('sale_price', e.target.value)} 
+                                    required 
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="sell-date">Sale Date</label>
+                                <input 
+                                    type="date" 
+                                    id="sell-date" 
+                                    value={sellForm.sale_date} 
+                                    onChange={(e) => handleSellChange('sale_date', e.target.value)} 
+                                    required
+                                />
+                            </div>
+
+                            <div className="modal-actions">
+                                <button type="button" className="btn btn-cancel" onClick={closeSellModal}>Cancel</button>
+                                <button type="submit" className="btn btn-save" disabled={isSubmitting}>
+                                    {isSubmitting ? 'Processing...' : 'Confirm Sale'}
                                 </button>
                             </div>
                         </form>

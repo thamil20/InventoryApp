@@ -1,0 +1,4 @@
+/* Reuse styles from CurrentInventoryList.css */
+@import './CurrentInventoryList.css';
+
+/* Add any sold-items-specific styles here if needed */
