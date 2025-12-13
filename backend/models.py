@@ -1,4 +1,4 @@
-from config import db
+from config import db, bcrypt
 from datetime import datetime
 from pytz import timezone
 
@@ -6,10 +6,18 @@ class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(100), unique=False, nullable=False)
+    password = db.Column(db.String(200), unique=False, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     phone = db.Column(db.String(15), unique=False, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone('UTC')))
+    
+    def set_password(self, password):
+        """Hash and set the user's password"""
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    def check_password(self, password):
+        """Check if the provided password matches the hashed password"""
+        return bcrypt.check_password_hash(self.password, password)
     
     def to_json(self):
         return {
@@ -24,6 +32,7 @@ class User(db.Model):
 class Current_Inventory(db.Model):
     __tablename__ = "current_inventory"
     item_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), unique=False, nullable=False)
     quantity = db.Column(db.Integer, unique=False, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
@@ -46,6 +55,7 @@ class Current_Inventory(db.Model):
 class Sold_Items(db.Model):
     __tablename__ = "sold_items"
     sold_item_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     # keep reference to the original inventory item (optional)
     original_item_id = db.Column(db.Integer, db.ForeignKey('current_inventory.item_id'), nullable=True)
 

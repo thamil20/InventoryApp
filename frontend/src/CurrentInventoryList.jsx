@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react"
+import { useAuth } from './AuthContext'
 import "./CurrentInventoryList.css"
 
 const CurrentInventoryList = () => {
+    const { token } = useAuth()
     const [currentInventory, setCurrentInventory] = useState([])
     const [selectedItem, setSelectedItem] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -22,7 +24,11 @@ const CurrentInventoryList = () => {
 
     const fetchCurrentInventory = async () => {
         const apiUrl = `${import.meta.env.VITE_API_URL}/inventory/current`
-        const response = await fetch(apiUrl)
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
         const data = await response.json()
         setCurrentInventory(data.current_inventory)
         console.log(data.current_inventory)
@@ -31,9 +37,19 @@ const CurrentInventoryList = () => {
     const deleteItem = async (itemId) => {
         const apiUrl = `${import.meta.env.VITE_API_URL}/inventory/delete_item/${itemId}`
         try {
-            const response = await fetch(apiUrl, { method: 'DELETE' })
+            const response = await fetch(apiUrl, { 
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
             if (response.ok) {
-                await fetch(`${import.meta.env.VITE_API_URL}/inventory/renumber`, { method: 'POST' })
+                await fetch(`${import.meta.env.VITE_API_URL}/inventory/renumber`, { 
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
                 fetchCurrentInventory()
             }else {
                 const message = await response.json()
@@ -109,6 +125,7 @@ const CurrentInventoryList = () => {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(data),
         }

@@ -1,44 +1,55 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 import './Login.css'
 
 const Register = () => {
-    const [name, setName] = useState('')
+    const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState('')
     const navigate = useNavigate()
+    const { login } = useAuth()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         
         if (password !== confirmPassword) {
-            alert('Passwords do not match')
+            setError('Passwords do not match')
+            return
+        }
+
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters long')
             return
         }
 
         setIsSubmitting(true)
+        setError('')
 
-        // TODO: Add your registration API call here
-        // const data = { name, email, password }
-        // const url = `${import.meta.env.VITE_API_URL}/auth/register`
-        // const options = {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(data),
-        // }
+        const data = { username, email, password, phone }
+        const url = `${import.meta.env.VITE_API_URL}/auth/register`
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }
         
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await fetch(url, options)
+            const result = await response.json()
             
-            // After successful registration, navigate to login or dashboard
-            // navigate('/login')
-            
-            console.log('Registration attempt:', { name, email, password })
+            if (response.ok) {
+                login(result.access_token, result.user)
+                navigate('/')
+            } else {
+                setError(result.error || 'Registration failed')
+            }
         } catch (err) {
-            alert('Error registering: ' + err)
+            setError('Error registering: ' + err.message)
         } finally {
             setIsSubmitting(false)
         }
@@ -51,13 +62,15 @@ const Register = () => {
                     <h2>Register</h2>
                 </div>
                 <form onSubmit={handleSubmit}>
+                    {error && <div className="error-message">{error}</div>}
+                    
                     <div className="form-group">
-                        <label htmlFor="name">Name</label>
+                        <label htmlFor="username">Username</label>
                         <input
                             type="text"
-                            id="name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            id="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             required
                         />
                     </div>
@@ -74,6 +87,16 @@ const Register = () => {
                     </div>
 
                     <div className="form-group">
+                        <label htmlFor="phone">Phone (Optional)</label>
+                        <input
+                            type="tel"
+                            id="phone"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="form-group">
                         <label htmlFor="password">Password</label>
                         <input
                             type="password"
@@ -81,6 +104,7 @@ const Register = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            minLength={8}
                         />
                     </div>
 

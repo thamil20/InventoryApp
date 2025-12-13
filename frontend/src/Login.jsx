@@ -1,36 +1,41 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 import './Login.css'
 
 const Login = () => {
-    const [email, setEmail] = useState('')
+    const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState('')
     const navigate = useNavigate()
+    const { login } = useAuth()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setIsSubmitting(true)
+        setError('')
 
-        // TODO: Add your login API call here
-        // const data = { email, password }
-        // const url = `${import.meta.env.VITE_API_URL}/auth/login`
-        // const options = {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(data),
-        // }
+        const data = { username, password }
+        const url = `${import.meta.env.VITE_API_URL}/auth/login`
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }
         
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await fetch(url, options)
+            const result = await response.json()
             
-            // After successful login, navigate to dashboard
-            // navigate('/')
-            
-            console.log('Login attempt:', { email, password })
+            if (response.ok) {
+                login(result.access_token, result.user)
+                navigate('/')
+            } else {
+                setError(result.error || 'Login failed')
+            }
         } catch (err) {
-            alert('Error logging in: ' + err)
+            setError('Error logging in: ' + err.message)
         } finally {
             setIsSubmitting(false)
         }
@@ -43,13 +48,15 @@ const Login = () => {
                     <h2>Login</h2>
                 </div>
                 <form onSubmit={handleSubmit}>
+                    {error && <div className="error-message">{error}</div>}
+                    
                     <div className="form-group">
-                        <label htmlFor="email">Email</label>
+                        <label htmlFor="username">Username</label>
                         <input
-                            type="email"
-                            id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type="text"
+                            id="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             required
                         />
                     </div>

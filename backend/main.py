@@ -1,6 +1,7 @@
 from flask import request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from config import app, db
-from models import Current_Inventory, Sold_Items
+from models import Current_Inventory, Sold_Items, User
 from datetime import datetime
 
 @app.route('/')
@@ -10,9 +11,125 @@ def home():
             200,
         )
 
+# Authentication routes
+@app.route('/auth/register', methods=['POST'])
+def register():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    email = request.json.get('email')
+    phone = request.json.get('phone')
+
+    if not username or not password or not email:
+        return (
+            jsonify({"error": "Missing required fields (username, password, email)"}), 
+            400,
+        )
+    
+    # Check if user already exists
+    if User.query.filter_by(username=username).first():
+        return (
+            jsonify({"error": "Username already exists"}), 
+            400,
+        )
+    
+    if User.query.filter_by(email=email).first():
+        return (
+            jsonify({"error": "Email already exists"}), 
+            400,
+        )
+    
+    new_user = User(
+        username=username,
+        email=email,
+        phone=phone,
+    )
+    new_user.set_password(password)
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        return (
+            jsonify({"error": "Failed to create user", "details": str(e)}), 
+            500,
+        )
+    
+    # Create access token for the new user
+    access_token = create_access_token(identity=new_user.id)
+    
+    return (
+        jsonify({
+            "message": "User registered successfully", 
+            "user": new_user.to_json(),
+            "access_token": access_token
+        }), 
+        201,
+    )
+
+@app.route('/auth/login', methods=['POST'])
+def login():
+    username = request.json.get('username')
+    password = request.json.get('password')
+
+    if not username or not password:
+        return (
+            jsonify({"error": "Missing username or password"}), 
+            400,
+        )
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user or not user.check_password(password):
+        return (
+            jsonify({"error": "Invalid username or password"}), 
+            401,
+        )
+    
+    # Create access token
+    access_token = create_access_token(identity=user.id)
+    
+    return (
+        jsonify({
+            "message": "Login successful",
+            "user": user.to_json(),
+            "access_token": access_token
+        }),
+        200,
+    )
+
+@app.route('/auth/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # With JWT, logout is handled on the client side by removing the token
+    # This endpoint is optional but can be used for logging or token blacklisting in the future
+    return (
+        jsonify({"message": "Logout successful"}),
+        200,
+    )
+
+@app.route('/auth/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    
+    if not user:
+        return (
+            jsonify({"error": "User not found"}),
+            404,
+        )
+    
+    return (
+        jsonify({"user": user.to_json()}),
+        200,
+    )
+
+
 @app.route('/inventory/current', methods=['GET'])
+@jwt_required()
 def get_current_inventory():
-    current_inventory = Current_Inventory.query.all()
+    user_id = get_jwt_identity()
+    current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
     json_inventory = list(map(lambda item: item.to_json(), current_inventory))
     return (
             jsonify({"current_inventory":json_inventory}), 
@@ -20,8 +137,10 @@ def get_current_inventory():
         )
 
 @app.route('/inventory/sold', methods=['GET'])
+@jwt_required()
 def get_sold_items():
-    sold_items = Sold_Items.query.all()
+    user_id = get_jwt_identity()
+    sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
     json_sold_items = list(map(lambda item: item.to_json(), sold_items))
     return (
             jsonify({"sold_items":json_sold_items}), 
@@ -29,7 +148,9 @@ def get_sold_items():
         )
 
 @app.route('/inventory/create_item', methods=['POST'])
+@jwt_required()
 def create_item():
+    user_id = get_jwt_identity()
     name = request.json.get('name')
     quantity = request.json.get('quantity')
     price = request.json.get('price')
@@ -43,6 +164,7 @@ def create_item():
         )
     
     new_item = Current_Inventory(
+        user_id=user_id,
         name=name,
         quantity=quantity,
         price=price,
@@ -66,8 +188,10 @@ def create_item():
         )
 
 @app.route('/inventory/sell_item/<int:item_id>', methods=['POST'])
+@jwt_required()
 def sell_item(item_id):
-    item = Current_Inventory.query.get(item_id)
+    user_id = get_jwt_identity()
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -91,6 +215,7 @@ def sell_item(item_id):
         )
     
     sold_item = Sold_Items(
+        user_id=user_id,
         original_item_id=item.item_id,
         name=item.name,
         quantity=item.quantity,
@@ -119,8 +244,10 @@ def sell_item(item_id):
         )
 
 @app.route("/inventory/update_item/<int:item_id>", methods=["PATCH"])
+@jwt_required()
 def update_item(item_id):
-    item = Current_Inventory.query.get(item_id)
+    user_id = get_jwt_identity()
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -148,8 +275,10 @@ def update_item(item_id):
         )
 
 @app.route("/inventory/delete_item/<int:item_id>", methods=["DELETE"])
+@jwt_required()
 def delete_item(item_id):
-    item = Current_Inventory.query.get(item_id)
+    user_id = get_jwt_identity()
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -171,9 +300,11 @@ def delete_item(item_id):
         )
 
 @app.route("/inventory/renumber", methods=["POST"])
+@jwt_required()
 def renumber_items():
+    user_id = get_jwt_identity()
     try:
-        items = Current_Inventory.query.order_by(Current_Inventory.item_id).all()
+        items = Current_Inventory.query.filter_by(user_id=user_id).order_by(Current_Inventory.item_id).all()
         for index, item in enumerate(items, 1):
             item.item_id = index
         db.session.commit()

@@ -1,7 +1,9 @@
 import {useState} from 'react'
+import { useAuth } from './AuthContext'
 import './AddItemForm.css'
 
 const AddItemForm = ({ }) => {
+    const { token } = useAuth()
     const [name, setName] = useState('')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
@@ -25,6 +27,7 @@ const AddItemForm = ({ }) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(data),
         }
