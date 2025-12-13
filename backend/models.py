@@ -31,7 +31,8 @@ class User(db.Model):
 # Define the Item model for the inventory management system
 class Current_Inventory(db.Model):
     __tablename__ = "current_inventory"
-    item_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), unique=False, nullable=False)
     quantity = db.Column(db.Integer, unique=False, nullable=False)
@@ -39,6 +40,9 @@ class Current_Inventory(db.Model):
     description = db.Column(db.String(255), unique=False, nullable=True)
     category = db.Column(db.String(50), unique=False, nullable=True)
     added_date = db.Column(db.DateTime, unique=False, nullable=False)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'item_id', name='uq_current_inventory_user_item'),
+    )
 
     # Return model data in JSON format for API responses
     def to_json(self):
@@ -57,7 +61,7 @@ class Sold_Items(db.Model):
     sold_item_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     # keep reference to the original inventory item (optional)
-    original_item_id = db.Column(db.Integer, db.ForeignKey('current_inventory.item_id'), nullable=True)
+    original_item_id = db.Column(db.Integer, nullable=True)
 
     # snapshot of the item at time of sale (duplicate on sale)
     name = db.Column(db.String(100), nullable=False)

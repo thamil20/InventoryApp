@@ -3,6 +3,18 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from config import app, db
 from models import Current_Inventory, Sold_Items, User
 from datetime import datetime
+from sqlalchemy import func
+
+# JWT error handlers
+@app.errorhandler(422)
+def handle_unprocessable_entity(e):
+    print(f"422 Error: {str(e)}")
+    return jsonify({"error": "Unprocessable Entity", "details": str(e)}), 422
+
+@app.errorhandler(401)
+def handle_unauthorized(e):
+    print(f"401 Error: {str(e)}")
+    return jsonify({"error": "Unauthorized", "details": str(e)}), 401
 
 @app.route('/')
 def home():
@@ -55,7 +67,7 @@ def register():
         )
     
     # Create access token for the new user
-    access_token = create_access_token(identity=new_user.id)
+    access_token = create_access_token(identity=str(new_user.id))
     
     return (
         jsonify({
@@ -86,7 +98,7 @@ def login():
         )
     
     # Create access token
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return (
         jsonify({
@@ -110,7 +122,7 @@ def logout():
 @app.route('/auth/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     
     if not user:
@@ -128,18 +140,27 @@ def get_current_user():
 @app.route('/inventory/current', methods=['GET'])
 @jwt_required()
 def get_current_inventory():
-    user_id = get_jwt_identity()
-    current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
-    json_inventory = list(map(lambda item: item.to_json(), current_inventory))
-    return (
-            jsonify({"current_inventory":json_inventory}), 
-            200,
+    try:
+        user_id = int(get_jwt_identity())
+        print(f"Get inventory - User ID from JWT: {user_id}")  # Debug log
+        current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
+        print(f"Found {len(current_inventory)} items for user {user_id}")  # Debug log
+        json_inventory = list(map(lambda item: item.to_json(), current_inventory))
+        return (
+                jsonify({"current_inventory":json_inventory}), 
+                200,
+            )
+    except Exception as e:
+        print(f"Error getting inventory: {str(e)}")  # Debug log
+        return (
+            jsonify({"error": "Failed to get inventory", "details": str(e)}), 
+            500,
         )
 
 @app.route('/inventory/sold', methods=['GET'])
 @jwt_required()
 def get_sold_items():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
     json_sold_items = list(map(lambda item: item.to_json(), sold_items))
     return (
@@ -150,21 +171,40 @@ def get_sold_items():
 @app.route('/inventory/create_item', methods=['POST'])
 @jwt_required()
 def create_item():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
+    print(f"User ID from JWT: {user_id}")  # Debug log
+    print(f"Request data: {request.json}")  # Debug log
+    
     name = request.json.get('name')
     quantity = request.json.get('quantity')
     price = request.json.get('price')
     description = request.json.get('description')
     category = request.json.get('category')
 
-    if not name or not quantity or not price or not description or not category:
+    if not name or quantity is None or price is None:
         return (
             jsonify({"error": "Missing required fields"}), 
             400,
         )
     
+    # Verify user exists
+    user = User.query.get(user_id)
+    if not user:
+        print(f"User with ID {user_id} not found in database")
+        return (
+            jsonify({"error": "User not found"}), 
+            404,
+        )
+    next_item_id = (
+        db.session.query(func.max(Current_Inventory.item_id))
+        .filter(Current_Inventory.user_id == user_id)
+        .scalar()
+    )
+    next_item_id = (next_item_id or 0) + 1
+    
     new_item = Current_Inventory(
         user_id=user_id,
+        item_id=next_item_id,
         name=name,
         quantity=quantity,
         price=price,
@@ -177,9 +217,11 @@ def create_item():
         db.session.add(new_item)
         db.session.commit()
     except Exception as e:
+        db.session.rollback()
+        print(f"Error creating item: {str(e)}")  # Log to console
         return (
-            jsonify({"error": f"Failed to create item, {e}", "details": str(e)}), 
-            400,
+            jsonify({"error": "Failed to create item", "details": str(e)}), 
+            422,
         )
     
     return (
@@ -190,7 +232,7 @@ def create_item():
 @app.route('/inventory/sell_item/<int:item_id>', methods=['POST'])
 @jwt_required()
 def sell_item(item_id):
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
@@ -246,7 +288,7 @@ def sell_item(item_id):
 @app.route("/inventory/update_item/<int:item_id>", methods=["PATCH"])
 @jwt_required()
 def update_item(item_id):
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
@@ -277,7 +319,7 @@ def update_item(item_id):
 @app.route("/inventory/delete_item/<int:item_id>", methods=["DELETE"])
 @jwt_required()
 def delete_item(item_id):
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
@@ -302,7 +344,7 @@ def delete_item(item_id):
 @app.route("/inventory/renumber", methods=["POST"])
 @jwt_required()
 def renumber_items():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     try:
         items = Current_Inventory.query.filter_by(user_id=user_id).order_by(Current_Inventory.item_id).all()
         for index, item in enumerate(items, 1):
