@@ -1,12 +1,13 @@
 .inventory-container {
-  max-width: 1200px;
+  max-width: 95%;
   margin: 2rem auto;
+  width: 95%;
   padding: 0 1rem;
 }
 
 .inventory-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-bottom: 2rem;
 }
@@ -14,6 +15,7 @@
 .inventory-header h2 {
   font-size: 2rem;
   color: #ffffff;
+  align-items: center;
   margin: 0;
 }
 
@@ -28,18 +30,23 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
+  table-layout: fixed;
 }
 
 .inventory-table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  align-items: center;
   font-weight: 600;
 }
 
 .inventory-table thead th {
   padding: 1.2rem 1rem;
-  text-align: left;
+  text-align: center;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inventory-table tbody tr {
@@ -58,6 +65,10 @@
 .inventory-table td {
   padding: 1rem;
   color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .inventory-table td:first-child {

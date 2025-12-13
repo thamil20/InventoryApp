@@ -1,7 +1,9 @@
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 2rem;
+  padding-top: 50px;
+  width: 100%;
   text-align: center;
 }
 

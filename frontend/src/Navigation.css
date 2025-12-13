@@ -1,40 +1,60 @@
 .navbar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-
   padding: 0.5rem 0;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 100;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
+  width: 100%;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 25px;
+  height: 40px;
 }
 
 .nav-logo {
-  color: #ffffff;
-  font-size: 1.2rem;
-  font-weight: none;
+  display: flex;
+  align-items: center;
   text-decoration: none;
+  margin-right: 3rem;
 }
 
-.nav-logo:hover {
-  color: #bfe9ff;
+.logo-box {
+  width: 35px;
+  height: 35px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.nav-logo:hover .logo-box {
+  background-color: #bfe9ff;
 }
 
 .nav-menu {
   display: flex;
   list-style: none;
-  gap: 1rem;
+  gap: 1.5rem;
   margin: 0;
   padding: 0;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-auth {
+  display: flex;
+  list-style: none;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  margin-left: 3rem;
 }
 
 .nav-item {

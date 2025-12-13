@@ -24,7 +24,6 @@ const AddItemForm = ({ }) => {
         const options = {
             method: 'POST',
             headers: {
-                'Access-Control-Allow-Origin': 'http://localhost:5137',
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(data),

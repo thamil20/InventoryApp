@@ -45,7 +45,6 @@ class Current_Inventory(db.Model):
     
 class Sold_Items(db.Model):
     __tablename__ = "sold_items"
-
     sold_item_id = db.Column(db.Integer, primary_key=True)
     # keep reference to the original inventory item (optional)
     original_item_id = db.Column(db.Integer, db.ForeignKey('current_inventory.item_id'), nullable=True)
