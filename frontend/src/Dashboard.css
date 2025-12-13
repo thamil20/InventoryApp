@@ -5,7 +5,7 @@
 }
 
 .dashboard-container h1 {
-  color: #333;
+  color: #f3f3f3;
   margin-bottom: 10px;
   text-align: center;
   font-size: 2.5rem;
@@ -13,7 +13,7 @@
 
 .welcome-message {
   text-align: center;
-  color: #666;
+  color: #8f8e8e;
   font-size: 1.2rem;
   margin-bottom: 30px;
 }
