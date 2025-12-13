@@ -24,6 +24,9 @@ const CurrentInventoryList = () => {
         sale_date: new Date().toISOString().split('T')[0]
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [filterColumn, setFilterColumn] = useState('all')
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
 
     useEffect(() => {
         fetchCurrentInventory()
@@ -222,31 +225,136 @@ const CurrentInventoryList = () => {
         }
     }
 
+    // Filter and search logic
+    const filteredInventory = currentInventory.filter(item => {
+        if (!searchTerm) return true
+        
+        const searchLower = searchTerm.toLowerCase()
+        
+        if (filterColumn === 'all') {
+            return (
+                item.name.toLowerCase().includes(searchLower) ||
+                item.itemId.toString().includes(searchLower) ||
+                item.quantity.toString().includes(searchLower) ||
+                item.price.toString().includes(searchLower) ||
+                (item.description && item.description.toLowerCase().includes(searchLower)) ||
+                (item.category && item.category.toLowerCase().includes(searchLower))
+            )
+        }
+        
+        // Filter by specific column
+        const value = item[filterColumn]
+        if (value === null || value === undefined) return false
+        return value.toString().toLowerCase().includes(searchLower)
+    })
+
+    // Sort logic
+    const sortedInventory = [...filteredInventory].sort((a, b) => {
+        if (!sortConfig.key) return 0
+
+        let aValue = a[sortConfig.key]
+        let bValue = b[sortConfig.key]
+
+        // Handle null/undefined values
+        if (aValue === null || aValue === undefined) aValue = ''
+        if (bValue === null || bValue === undefined) bValue = ''
+
+        // Convert to lowercase for string comparison
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+
+        if (aValue < bValue) {
+            return sortConfig.direction === 'asc' ? -1 : 1
+        }
+        if (aValue > bValue) {
+            return sortConfig.direction === 'asc' ? 1 : -1
+        }
+        return 0
+    })
+
+    const handleSort = (key) => {
+        let direction = 'asc'
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc'
+        }
+        setSortConfig({ key, direction })
+    }
+
+    const getSortIndicator = (columnKey) => {
+        if (sortConfig.key !== columnKey) return ' ↕'
+        return sortConfig.direction === 'asc' ? ' ↑' : ' ↓'
+    }
+
     return <div className="inventory-container">
         <div className="inventory-header">
             <h2>Current Inventory</h2>
+        </div>
+        <div className="search-filter-container">
+            <select 
+                value={filterColumn} 
+                onChange={(e) => setFilterColumn(e.target.value)}
+                className="filter-dropdown"
+            >
+                <option value="all">All Columns</option>
+                <option value="itemId">ID</option>
+                <option value="name">Name</option>
+                <option value="quantity">Quantity</option>
+                <option value="price">Price</option>
+                <option value="description">Description</option>
+                <option value="category">Category</option>
+            </select>
+            <input
+                type="text"
+                placeholder={`Search ${filterColumn === 'all' ? 'all columns' : filterColumn}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+            />
+            {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="clear-search-btn">
+                    ✕
+                </button>
+            )}
         </div>
         <div className="inventory-table-wrapper">
             {currentInventory.length === 0 ? (
                 <div className="empty-state">
                     <p>No items in inventory</p>
                 </div>
+            ) : sortedInventory.length === 0 ? (
+                <div className="empty-state">
+                    <p>No items match your search</p>
+                </div>
             ) : (
                 <table className="inventory-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Description</th>
-                            <th>Category</th>
-                            <th>Added Date</th>
+                            <th onClick={() => handleSort('itemId')} className="sortable-header">
+                                ID{getSortIndicator('itemId')}
+                            </th>
+                            <th onClick={() => handleSort('name')} className="sortable-header">
+                                Name{getSortIndicator('name')}
+                            </th>
+                            <th onClick={() => handleSort('quantity')} className="sortable-header">
+                                Quantity{getSortIndicator('quantity')}
+                            </th>
+                            <th onClick={() => handleSort('price')} className="sortable-header">
+                                Price{getSortIndicator('price')}
+                            </th>
+                            <th onClick={() => handleSort('description')} className="sortable-header">
+                                Description{getSortIndicator('description')}
+                            </th>
+                            <th onClick={() => handleSort('category')} className="sortable-header">
+                                Category{getSortIndicator('category')}
+                            </th>
+                            <th onClick={() => handleSort('addedDate')} className="sortable-header">
+                                Added Date{getSortIndicator('addedDate')}
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {currentInventory.map((item) => (
+                        {sortedInventory.map((item) => (
                             <tr key={item.itemId} onClick={() => openItemDetails(item)} className="clickable-row">
                                 <td title={item.itemId}>{item.itemId}</td>
                                 <td title={item.name}>{item.name}</td>
