@@ -1,3 +1,4 @@
 instance
-.env.production
+.env
 .env.example
+venv

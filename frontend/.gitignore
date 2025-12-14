@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Runtime data
-.env.production
+.env
+venv
 node_modules
 dist
 dist-ssr
