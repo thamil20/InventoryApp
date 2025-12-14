@@ -1,0 +1,51 @@
+# Render Deployment Configuration
+# This file configures automatic deployment of your InventoryApp on Render.com
+
+services:
+  # Backend API Service
+  - type: web
+    name: inventoryapp-backend
+    env: python
+    region: oregon
+    buildCommand: bash build.sh
+    startCommand: cd backend && gunicorn --bind 0.0.0.0:$PORT main:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: 0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventoryapp-db
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        value: https://inventoryapp-frontend.onrender.com
+      - key: LOG_LEVEL
+        value: WARNING
+      - key: RATE_LIMIT_DEFAULT
+        value: 100 per minute
+      - key: RATE_LIMIT_LOGIN
+        value: 5 per minute
+      - key: RATE_LIMIT_REGISTER
+        value: 3 per hour
+
+  # Frontend Static Site
+  - type: web
+    name: inventoryapp-frontend
+    env: static
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://inventoryapp-backend.onrender.com
+
+databases:
+  - name: inventoryapp-db
+    databaseName: inventoryapp
+    user: inventoryapp
+    region: oregon
