@@ -31,7 +31,7 @@ if ENV == 'production' and app.config["SECRET_KEY"] in [
     raise ValueError("SECRET_KEY must be a secure random string in production (not a default/dev key)")
 
 # CORS configuration - restrict origins in production
-allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173')
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5137')
 allowed_origins_list = [origin.strip() for origin in allowed_origins.split(',')]
 CORS(app, resources={r"/*": {
     "origins": allowed_origins_list,
@@ -40,7 +40,7 @@ CORS(app, resources={r"/*": {
 }})
 
 # Database configuration
-database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/inventoryapp')
+database_url = os.getenv('DATABASE_URL')
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

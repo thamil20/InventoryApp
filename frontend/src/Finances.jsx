@@ -39,7 +39,7 @@ function Finances() {
   const handleUpdateExpenses = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('http://localhost:5000/finances/expenses', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances/expenses`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
