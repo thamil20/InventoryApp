@@ -1,12 +1,4 @@
-# Model for manager invitations
-class ManagerInvitation(db.Model):
-    __tablename__ = 'manager_invitations'
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), nullable=False)
-    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    token = db.Column(db.String(64), unique=True, nullable=False)
-    accepted = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
 from config import db, bcrypt
 from datetime import datetime
 from pytz import timezone
@@ -66,6 +58,16 @@ class EmployeePermission(db.Model):
             "can_add_items": self.can_add_items,
             "can_remove_items": self.can_remove_items,
         }
+
+# Model for manager invitations
+class ManagerInvitation(db.Model):
+    __tablename__ = 'manager_invitations'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    accepted = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 # Define the Item model for the inventory management system
 class Current_Inventory(db.Model):
