@@ -22,16 +22,10 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from config import app, db, limiter
 from models import Current_Inventory, Sold_Items, User, EmployeePermission
 from models import db
+from flask_migrate import Migrate
 
-# Model for manager invitations
-class ManagerInvitation(db.Model):
-    __tablename__ = 'manager_invitations'
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), nullable=False)
-    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    token = db.Column(db.String(64), unique=True, nullable=False)
-    accepted = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+migrate = Migrate(app, db)
+
 
 from schemas import (
     validate_request, UserRegistrationSchema, UserLoginSchema,
