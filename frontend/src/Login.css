@@ -5,10 +5,11 @@
 }
 
 .auth-card {
-  background: rgba(185, 185, 185, 0.747);
+  background: var(--bg-card);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   padding: 2rem;
+  transition: all 0.3s ease;
 }
 
 .auth-header {
@@ -18,12 +19,12 @@
 
 .auth-header h2 {
   font-size: 2rem;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .auth-subtitle {
-  color: #282c34;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin-top: 0.5rem;
   margin-bottom: 0;
@@ -46,7 +47,7 @@
 .auth-card .form-group label {
   display: block;
   font-weight: 600;
-  color: #282c34;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
@@ -54,12 +55,14 @@
 .auth-card .form-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--input-border);
   border-radius: 4px;
   font-size: 1rem;
   font-family: inherit;
   transition: all 0.3s ease;
   box-sizing: border-box;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .auth-card .form-group input:focus {

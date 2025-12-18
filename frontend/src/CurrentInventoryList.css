@@ -14,9 +14,10 @@
 
 .inventory-header h2 {
   font-size: 2rem;
-  color: #242424;
+  color: var(--text-primary);
   align-items: center;
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 /* Search and filter container */

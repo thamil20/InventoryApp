@@ -1,10 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { useTheme } from './ThemeContext'
 import './Navigation.css'
 import icon from './assets/icon.webp'
 
 function Navigation() {
   const { isAuthenticated, user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -15,9 +17,14 @@ function Navigation() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          <img src={icon} alt="Logo" className="logo-icon" />
-        </Link>
+        <div className="nav-left">
+          <Link to="/" className="nav-logo">
+            <img src={icon} alt="Logo" className="logo-icon" />
+          </Link>
+          <button onClick={toggleTheme} className="theme-toggle" title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+        </div>
         {isAuthenticated && (
           <ul className="nav-menu">
             <li className="nav-item">

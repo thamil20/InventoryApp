@@ -10,15 +10,17 @@
 
 .form-header h2 {
   font-size: 2rem;
-  color: #242424;
+  color: var(--text-primary);
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .form-card {
-  background: rgba(185, 185, 185, 0.747);
+  background: var(--bg-card);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   padding: 2rem;
+  transition: all 0.3s ease;
 }
 
 .form-group {

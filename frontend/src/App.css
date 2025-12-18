@@ -5,6 +5,15 @@
   padding-top: 50px;
   width: 100%;
   text-align: center;
+  background-color: var(--bg-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease;
+}
+
+.app-container {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 

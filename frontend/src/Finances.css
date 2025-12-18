@@ -2,10 +2,11 @@
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  color: var(--text-primary);
 }
 
 .finances-container h1 {
-  color: #242424;
+  color: var(--text-primary);
   margin-bottom: 30px;
   text-align: center;
   font-size: 2.5rem;
@@ -156,10 +157,11 @@
 }
 
 .chart-section {
-  background: white;
+  background: var(--bg-card);
   padding: 30px;
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow);
+  transition: background-color 0.3s ease;
 }
 
 .chart-header {
@@ -172,7 +174,7 @@
 }
 
 .chart-container h3 {
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
   font-size: 1.5rem;
 }
@@ -184,7 +186,7 @@
 }
 
 .period-selector label {
-  color: #555;
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 1rem;
 }
@@ -194,8 +196,8 @@
   font-size: 1rem;
   border: 2px solid #667eea;
   border-radius: 8px;
-  background: white;
-  color: #333;
+  background: var(--input-bg);
+  color: var(--text-primary);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -203,13 +205,18 @@
 
 .period-dropdown:hover {
   border-color: #764ba2;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
 }
 
 .period-dropdown:focus {
   outline: none;
   border-color: #764ba2;
   box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+}
+
+.period-dropdown option {
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .chart-grid-wrapper {
@@ -235,8 +242,9 @@
   align-items: flex-end;
   height: 200px;
   padding: 10px;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
+  transition: background-color 0.3s ease;
 }
 
 .chart-bar-wrapper {
@@ -278,21 +286,22 @@
 .chart-label {
   margin-top: 8px;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .chart-day-number {
   margin-top: 4px;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 600;
 }
 
 .sales-details {
   margin-top: 40px;
   padding-top: 30px;
-  border-top: 2px solid #e0e0e0;
+  border-top: 2px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .sales-details-header {
@@ -305,7 +314,7 @@
 }
 
 .sales-details h4 {
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
   font-size: 1.3rem;
 }
@@ -323,10 +332,12 @@
   flex: 1;
   padding: 10px 40px 10px 15px;
   font-size: 0.95rem;
-  border: 2px solid #ddd;
+  border: 2px solid var(--input-border);
   border-radius: 8px;
   transition: all 0.3s ease;
   outline: none;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .search-input:focus {
@@ -335,7 +346,7 @@
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .clear-search-btn {
@@ -343,7 +354,7 @@
   right: 10px;
   background: none;
   border: none;
-  color: #999;
+  color: var(--text-tertiary);
   font-size: 1.2rem;
   cursor: pointer;
   padding: 5px;
@@ -362,13 +373,15 @@
   max-height: 600px;
   overflow-y: auto;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: box-shadow 0.3s ease;
 }
 
 .sales-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-card);
+  transition: background-color 0.3s ease;
 }
 
 .sales-table thead {
@@ -389,25 +402,26 @@
 }
 
 .sales-table tbody tr {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s ease;
 }
 
 .sales-table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: var(--table-hover);
 }
 
 .sales-table tbody td {
   padding: 12px 15px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.95rem;
 }
 
 .sales-table tfoot {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   position: sticky;
   bottom: 0;
   border-top: 2px solid #667eea;
+  transition: background-color 0.3s ease;
 }
 
 .sales-table tfoot td {
@@ -421,18 +435,22 @@
 }
 
 .sales-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+  background-color: var(--table-stripe);
 }
 
 .sales-table tbody tr:nth-child(even):hover {
-  background-color: #f0f0f0;
+  background-color: var(--table-hover);
 }
 
 .error {
-  color: #d32f2f;
+  color: #f44336;
   text-align: center;
   padding: 20px;
   font-size: 1.1rem;
+}
+
+[data-theme="dark"] .error {
+  color: #ff6b6b;
 }
 
 @media (max-width: 768px) {

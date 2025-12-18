@@ -5,17 +5,19 @@
 }
 
 .dashboard-container h1 {
-  color: #242424;
+  color: var(--text-primary);
   margin-bottom: 10px;
   text-align: center;
   font-size: 2.5rem;
+  transition: color 0.3s ease;
 }
 
 .welcome-message {
   text-align: center;
-  color: #8f8e8e;
+  color: var(--text-secondary);
   font-size: 1.2rem;
   margin-bottom: 30px;
+  transition: color 0.3s ease;
 }
 
 /* Profit Section */

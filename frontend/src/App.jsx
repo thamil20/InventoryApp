@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 import { AuthProvider, useAuth } from './AuthContext'
+import { ThemeProvider } from './ThemeContext'
 import Navigation from './Navigation.jsx'
 import Dashboard from './Dashboard.jsx'
 import CurrentInventoryList from './CurrentInventoryList.jsx'
@@ -85,7 +86,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   )
