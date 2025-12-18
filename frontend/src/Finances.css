@@ -212,27 +212,39 @@
   box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
 }
 
-.chart {
+.chart-grid-wrapper {
   width: 100%;
-  overflow-x: auto;
-  margin-bottom: 40px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 0;
+}
+
+.chart-row {
+  margin-bottom: 30px;
+}
+
+.chart-row:last-child {
+  margin-bottom: 0;
 }
 
 .chart-bars {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 15px;
   align-items: flex-end;
-  justify-content: space-around;
-  height: 250px;
+  height: 200px;
   padding: 10px;
-  gap: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
 .chart-bar-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
-  min-width: 80px;
+  justify-content: flex-end;
+  height: 100%;
 }
 
 .chart-bar {
@@ -268,6 +280,13 @@
   font-size: 0.85rem;
   color: #666;
   font-weight: 500;
+}
+
+.chart-day-number {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: 600;
 }
 
 .sales-details {
@@ -375,14 +394,24 @@
   }
 
   .chart-bars {
-    height: 200px;
+    height: 180px;
+    gap: 8px;
+    grid-template-columns: repeat(7, 1fr);
   }
 
-  .chart-bar-wrapper {
-    min-width: 60px;
+  .chart-grid-wrapper {
+    max-height: 500px;
   }
 
   .bar-value {
+    font-size: 0.6rem;
+  }
+
+  .chart-label {
+    font-size: 0.7rem;
+  }
+
+  .chart-day-number {
     font-size: 0.65rem;
   }
 

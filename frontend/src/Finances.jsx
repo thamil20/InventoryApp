@@ -86,28 +86,14 @@ function Finances() {
     const salesData = financesData.dailySales
     if (!salesData || salesData.length === 0) return null
 
-    // Group data into weeks (7-day periods)
-    const weeklyData = []
+    // Group data into rows of 7 days each
+    const rows = []
     for (let i = 0; i < salesData.length; i += 7) {
-      const weekDays = salesData.slice(i, i + 7)
-      const weekRevenue = weekDays.reduce((sum, day) => sum + day.revenue, 0)
-      const weekItemsSold = weekDays.reduce((sum, day) => sum + (day.items_sold || 0), 0)
-      
-      // Get start and end dates for the week
-      const startDate = new Date(weekDays[0].date)
-      const endDate = new Date(weekDays[weekDays.length - 1].date)
-      
-      weeklyData.push({
-        startDate: startDate,
-        endDate: endDate,
-        revenue: weekRevenue,
-        itemsSold: weekItemsSold,
-        days: weekDays
-      })
+      rows.push(salesData.slice(i, i + 7))
     }
 
-    const maxRevenue = Math.max(...weeklyData.map(week => week.revenue), 1)
-    const chartHeight = 200
+    const maxRevenue = Math.max(...salesData.map(day => day.revenue), 1)
+    const chartHeight = 150
     
     const getPeriodLabel = () => {
       switch(timePeriod) {
@@ -117,12 +103,6 @@ function Finances() {
         case 'year': return 'All Sales Data'
         default: return 'Sales Data'
       }
-    }
-
-    const formatWeekLabel = (startDate, endDate) => {
-      const start = `${startDate.getMonth() + 1}/${startDate.getDate()}`
-      const end = `${endDate.getMonth() + 1}/${endDate.getDate()}`
-      return `${start}-${end}`
     }
     
     return (
@@ -144,24 +124,30 @@ function Finances() {
             </select>
           </div>
         </div>
-        <div className="chart">
-          <div className="chart-bars">
-            {weeklyData.map((week, index) => {
-              const barHeight = (week.revenue / maxRevenue) * chartHeight
-              return (
-                <div key={index} className="chart-bar-wrapper">
-                  <div 
-                    className="chart-bar"
-                    style={{ height: `${barHeight}px` }}
-                    title={`Week ${index + 1} (${formatWeekLabel(week.startDate, week.endDate)}): ${formatCurrency(week.revenue)} - ${week.itemsSold} items`}
-                  >
-                    <span className="bar-value">{formatCurrency(week.revenue)}</span>
-                  </div>
-                  <div className="chart-label">{formatWeekLabel(week.startDate, week.endDate)}</div>
-                </div>
-              )
-            })}
-          </div>
+        <div className="chart-grid-wrapper">
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} className="chart-row">
+              <div className="chart-bars">
+                {row.map((day, dayIndex) => {
+                  const barHeight = (day.revenue / maxRevenue) * chartHeight
+                  const globalDayIndex = rowIndex * 7 + dayIndex + 1
+                  return (
+                    <div key={dayIndex} className="chart-bar-wrapper">
+                      <div 
+                        className="chart-bar"
+                        style={{ height: `${barHeight}px` }}
+                        title={`Day ${globalDayIndex} (${formatDate(day.date)}): ${formatCurrency(day.revenue)} - ${day.items_sold || 0} items`}
+                      >
+                        <span className="bar-value">{formatCurrency(day.revenue)}</span>
+                      </div>
+                      <div className="chart-label">{formatDate(day.date)}</div>
+                      <div className="chart-day-number">Day {globalDayIndex}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
         <div className="sales-details">
           <h4>Detailed Sales Data</h4>
