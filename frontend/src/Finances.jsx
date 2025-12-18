@@ -11,12 +11,13 @@ function Finances() {
 
   useEffect(() => {
     fetchFinances()
-  }, [])
+  }, [timePeriod])
 
   const fetchFinances = async () => {
     try {
+      setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances?days=${timePeriod}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -79,18 +80,10 @@ function Finances() {
     return `${month}/${day}`
   }
 
-  const getFilteredSalesData = () => {
-    if (!financesData || !financesData.dailySales) return []
-
-    const days = parseInt(timePeriod)
-    if (timePeriod === 'year') {
-      return financesData.dailySales
-    }
-    return financesData.dailySales.slice(-days)
-  }
-
   const renderChart = () => {
-    const salesData = getFilteredSalesData()
+    if (!financesData || !financesData.dailySales) return null
+    
+    const salesData = financesData.dailySales
     if (!salesData || salesData.length === 0) return null
 
     const maxRevenue = Math.max(...salesData.map(day => day.revenue), 1)

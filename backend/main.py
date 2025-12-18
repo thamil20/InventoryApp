@@ -398,6 +398,9 @@ def get_finances():
     try:
         user_id = int(get_jwt_identity())
         
+        # Get days parameter from query string (default to 7)
+        days_param = request.args.get('days', '7')
+        
         # Get user to retrieve expenses
         user = User.query.get(user_id)
         if not user:
@@ -418,27 +421,39 @@ def get_finances():
         # Calculate potential revenue from current inventory
         potential_revenue = sum(item.price * item.quantity for item in current_inventory)
         
-        # Calculate daily sales for the last 7 days
+        # Calculate daily sales based on requested period
         from datetime import timedelta
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         daily_sales = []
         
-        for i in range(6, -1, -1):  # 6 days ago to today
+        # Determine the number of days to fetch
+        if days_param == 'year':
+            # Get all sales data grouped by day
+            num_days = 365
+        else:
+            num_days = int(days_param)
+        
+        for i in range(num_days - 1, -1, -1):  # Count backwards from num_days-1 to 0
             day = today - timedelta(days=i)
             next_day = day + timedelta(days=1)
             
             # Get sales for this specific day
-            day_revenue = db.session.query(
-                func.sum(Sold_Items.sale_price * Sold_Items.quantity_sold)
+            day_result = db.session.query(
+                func.sum(Sold_Items.sale_price * Sold_Items.quantity_sold),
+                func.sum(Sold_Items.quantity_sold)
             ).filter(
                 Sold_Items.user_id == user_id,
                 Sold_Items.sale_date >= day,
                 Sold_Items.sale_date < next_day
-            ).scalar() or 0
+            ).first()
+            
+            day_revenue = float(day_result[0]) if day_result[0] else 0
+            items_sold = int(day_result[1]) if day_result[1] else 0
             
             daily_sales.append({
                 "date": day.strftime('%Y-%m-%d'),
-                "revenue": float(day_revenue)
+                "revenue": day_revenue,
+                "items_sold": items_sold
             })
         
         return (
