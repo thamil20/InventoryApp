@@ -128,3 +128,5 @@
 2025-12-14 12:44:34,889 INFO: InventoryApp starting in production mode [in /var/www/InventoryApp/backend/config.py:115]
 2025-12-14 12:44:35,117 INFO: InventoryApp starting in production mode [in /var/www/InventoryApp/backend/config.py:115]
 2025-12-14 12:44:35,181 INFO: InventoryApp starting in production mode [in /var/www/InventoryApp/backend/config.py:115]
+2025-12-14 15:14:13,868 INFO: Expired token attempt [in /var/www/InventoryApp/backend/config.py:125]
+2025-12-16 16:22:15,348 INFO: Expired token attempt [in /var/www/InventoryApp/backend/config.py:125]
