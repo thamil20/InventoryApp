@@ -86,7 +86,27 @@ function Finances() {
     const salesData = financesData.dailySales
     if (!salesData || salesData.length === 0) return null
 
-    const maxRevenue = Math.max(...salesData.map(day => day.revenue), 1)
+    // Group data into weeks (7-day periods)
+    const weeklyData = []
+    for (let i = 0; i < salesData.length; i += 7) {
+      const weekDays = salesData.slice(i, i + 7)
+      const weekRevenue = weekDays.reduce((sum, day) => sum + day.revenue, 0)
+      const weekItemsSold = weekDays.reduce((sum, day) => sum + (day.items_sold || 0), 0)
+      
+      // Get start and end dates for the week
+      const startDate = new Date(weekDays[0].date)
+      const endDate = new Date(weekDays[weekDays.length - 1].date)
+      
+      weeklyData.push({
+        startDate: startDate,
+        endDate: endDate,
+        revenue: weekRevenue,
+        itemsSold: weekItemsSold,
+        days: weekDays
+      })
+    }
+
+    const maxRevenue = Math.max(...weeklyData.map(week => week.revenue), 1)
     const chartHeight = 200
     
     const getPeriodLabel = () => {
@@ -97,6 +117,12 @@ function Finances() {
         case 'year': return 'All Sales Data'
         default: return 'Sales Data'
       }
+    }
+
+    const formatWeekLabel = (startDate, endDate) => {
+      const start = `${startDate.getMonth() + 1}/${startDate.getDate()}`
+      const end = `${endDate.getMonth() + 1}/${endDate.getDate()}`
+      return `${start}-${end}`
     }
     
     return (
@@ -120,18 +146,18 @@ function Finances() {
         </div>
         <div className="chart">
           <div className="chart-bars">
-            {salesData.map((day, index) => {
-              const barHeight = (day.revenue / maxRevenue) * chartHeight
+            {weeklyData.map((week, index) => {
+              const barHeight = (week.revenue / maxRevenue) * chartHeight
               return (
                 <div key={index} className="chart-bar-wrapper">
                   <div 
                     className="chart-bar"
                     style={{ height: `${barHeight}px` }}
-                    title={`${formatDate(day.date)}: ${formatCurrency(day.revenue)}`}
+                    title={`Week ${index + 1} (${formatWeekLabel(week.startDate, week.endDate)}): ${formatCurrency(week.revenue)} - ${week.itemsSold} items`}
                   >
-                    <span className="bar-value">{formatCurrency(day.revenue)}</span>
+                    <span className="bar-value">{formatCurrency(week.revenue)}</span>
                   </div>
-                  <div className="chart-label">{formatDate(day.date)}</div>
+                  <div className="chart-label">{formatWeekLabel(week.startDate, week.endDate)}</div>
                 </div>
               )
             })}
