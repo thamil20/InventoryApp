@@ -7,6 +7,7 @@ function Finances() {
   const [error, setError] = useState(null)
   const [editingExpenses, setEditingExpenses] = useState(false)
   const [expensesInput, setExpensesInput] = useState('')
+  const [timePeriod, setTimePeriod] = useState('7')
 
   useEffect(() => {
     fetchFinances()
@@ -78,18 +79,55 @@ function Finances() {
     return `${month}/${day}`
   }
 
-  const renderChart = () => {
-    if (!financesData || !financesData.dailySales) return null
+  const getFilteredSalesData = () => {
+    if (!financesData || !financesData.dailySales) return []
 
-    const maxRevenue = Math.max(...financesData.dailySales.map(day => day.revenue), 1)
+    const days = parseInt(timePeriod)
+    if (timePeriod === 'year') {
+      return financesData.dailySales
+    }
+    return financesData.dailySales.slice(-days)
+  }
+
+  const renderChart = () => {
+    const salesData = getFilteredSalesData()
+    if (!salesData || salesData.length === 0) return null
+
+    const maxRevenue = Math.max(...salesData.map(day => day.revenue), 1)
     const chartHeight = 200
+    
+    const getPeriodLabel = () => {
+      switch(timePeriod) {
+        case '7': return 'Last 7 Days of Sales'
+        case '30': return 'Last 30 Days of Sales'
+        case '90': return 'Last 90 Days of Sales'
+        case 'year': return 'All Sales Data'
+        default: return 'Sales Data'
+      }
+    }
     
     return (
       <div className="chart-container">
-        <h3>Last 7 Days Sales</h3>
+        <div className="chart-header">
+          <h3>{getPeriodLabel()}</h3>
+          <div className="period-selector">
+            <label htmlFor="period-dropdown">Time Period: </label>
+            <select 
+              id="period-dropdown"
+              value={timePeriod} 
+              onChange={(e) => setTimePeriod(e.target.value)}
+              className="period-dropdown"
+            >
+              <option value="7">7 Days</option>
+              <option value="30">30 Days</option>
+              <option value="90">90 Days</option>
+              <option value="year">Whole Year</option>
+            </select>
+          </div>
+        </div>
         <div className="chart">
           <div className="chart-bars">
-            {financesData.dailySales.map((day, index) => {
+            {salesData.map((day, index) => {
               const barHeight = (day.revenue / maxRevenue) * chartHeight
               return (
                 <div key={index} className="chart-bar-wrapper">
@@ -104,6 +142,36 @@ function Finances() {
                 </div>
               )
             })}
+          </div>
+        </div>
+        <div className="sales-details">
+          <h4>Detailed Sales Data</h4>
+          <div className="sales-table-container">
+            <table className="sales-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Revenue</th>
+                  <th>Items Sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesData.map((day, index) => (
+                  <tr key={index}>
+                    <td>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                    <td>{formatCurrency(day.revenue)}</td>
+                    <td>{day.items_sold || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="total-row">
+                  <td><strong>Total</strong></td>
+                  <td><strong>{formatCurrency(salesData.reduce((sum, day) => sum + day.revenue, 0))}</strong></td>
+                  <td><strong>{salesData.reduce((sum, day) => sum + (day.items_sold || 0), 0)}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </div>
