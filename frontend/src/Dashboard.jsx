@@ -1,12 +1,16 @@
 import { useAuth } from './AuthContext'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import './Dashboard.css'
+import { AuthContext } from './AuthContext'
 
 function Dashboard() {
-  const { user } = useAuth()
+  const { user, setUser } = useContext(AuthContext)
+  const { user: authUser } = useAuth()
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [requesting, setRequesting] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
@@ -48,6 +52,25 @@ function Dashboard() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
+  const handleManagerRequest = async () => {
+    setRequesting(true)
+    try {
+      const res = await fetch('/api/request-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      })
+      if (res.ok) {
+        setRequestSent(true)
+        // Optionally update user context
+        setUser({ ...user, role: 'manager' })
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRequesting(false)
+    }
+  }
+
   if (loading) {
     return <div className="dashboard-container"><p>Loading dashboard...</p></div>
   }
@@ -58,8 +81,19 @@ function Dashboard() {
   
   return (
     <div className="dashboard-container">
+      {user?.role === 'default' && (
+        <div style={{ position: 'absolute', top: 20, right: 20 }}>
+          {requestSent ? (
+            <button disabled>Request Sent!</button>
+          ) : (
+            <button onClick={handleManagerRequest} disabled={requesting}>
+              {requesting ? 'Requesting...' : 'Click to become a manager'}
+            </button>
+          )}
+        </div>
+      )}
       <h1>Dashboard</h1>
-      <p className="welcome-message">Welcome back, {user?.username}!</p>
+      <p className="welcome-message">Welcome back, {authUser?.username}!</p>
 
       {/* Profit Card */}
       <div className="profit-section">

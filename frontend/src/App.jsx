@@ -8,9 +8,20 @@ import CurrentInventoryList from './CurrentInventoryList.jsx'
 import SoldItemsList from './SoldItemsList.jsx'
 import AddItemForm from './AddItemForm.jsx'
 import Finances from './Finances.jsx'
+import AdminDashboard from './AdminDashboard.jsx'
+import ManagerDashboard from './ManagerDashboard.jsx'
+          <Route
+            path="/manager"
+            element={
+              <ProtectedRoute>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
 import Login from './Login.jsx'
 import Register from './Register.jsx'
 import ForgotPassword from './ForgotPassword.jsx'
+import ResetPassword from './ResetPassword.jsx'
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +47,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route 
             path="/" 
             element={
@@ -75,6 +87,14 @@ function AppContent() {
                 <Finances />
               </ProtectedRoute>
             } 
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
           />
         </Routes>
       </div>

@@ -1,7 +1,38 @@
+# Endpoint for manager to list their invitations
+@app.route('/api/manager/invitations', methods=['GET'])
+@jwt_required()
+def list_invitations():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+    invitations = ManagerInvitation.query.filter_by(manager_id=user.id).all()
+    return jsonify({'invitations': [
+        {
+            'id': inv.id,
+            'email': inv.email,
+            'accepted': inv.accepted
+        } for inv in invitations
+    ]})
+# ...existing imports...
+from flask import url_for
+import uuid
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from config import app, db, limiter
-from models import Current_Inventory, Sold_Items, User
+from models import Current_Inventory, Sold_Items, User, EmployeePermission
+from models import db
+
+# Model for manager invitations
+class ManagerInvitation(db.Model):
+    __tablename__ = 'manager_invitations'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    accepted = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
 from schemas import (
     validate_request, UserRegistrationSchema, UserLoginSchema,
     InventoryItemSchema, ItemUpdateSchema, SoldItemSchema,
@@ -120,43 +151,98 @@ def logout():
         200,
     )
 
+
+# --- Password reset with email support ---
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from datetime import timedelta
+
+from sqlalchemy import and_
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_token"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token = db.Column(db.String(128), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False, nullable=False)
+
+def send_email(to_email, subject, body):
+    # Use environment variables for config
+    import os
+    SMTP_HOST = os.environ.get('SMTP_HOST')
+    SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+    SMTP_USER = os.environ.get('SMTP_USER')
+    SMTP_PASS = os.environ.get('SMTP_PASS')
+    FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USER)
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASS):
+        app.logger.error('SMTP config missing')
+        return False
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = FROM_EMAIL
+    msg['To'] = to_email
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+        return True
+    except Exception as e:
+        app.logger.error(f"Failed to send email: {e}")
+        return False
+
 @app.route('/auth/forgot-password', methods=['POST'])
 @limiter.limit("3 per hour")
 @validate_request(ForgotPasswordSchema)
 def forgot_password():
-    """
-    Password reset endpoint (basic implementation)
-    NOTE: This is a basic implementation that returns a success message.
-    For production, you should:
-    1. Generate a secure reset token
-    2. Store it with expiration in database
-    3. Send email with reset link
-    4. Implement token verification and password update endpoint
-    """
     data = request.validated_data
     email = data['email']
-    
-    # Check if user exists with this email
     user = User.query.filter_by(email=email).first()
-    
-    # Always return success to prevent email enumeration attacks
-    # In production, send actual email only if user exists
+    # Always return success to prevent email enumeration
     if user:
-        app.logger.info(f"Password reset requested for user: {user.username}")
-        # TODO: Generate reset token and send email
-        # token = secrets.token_urlsafe(32)
-        # Save token to database with expiration
-        # Send email with reset link containing token
-    else:
-        app.logger.info(f"Password reset requested for non-existent email: {email}")
-    
-    # Always return success message (security best practice)
+        # Generate token
+        token = secrets.token_urlsafe(48)
+        expires = datetime.utcnow() + timedelta(hours=1)
+        prt = PasswordResetToken(user_id=user.id, token=token, expires_at=expires)
+        db.session.add(prt)
+        db.session.commit()
+        # Send email
+        reset_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token={token}"
+
+            # Endpoint for employee to accept invitation
+        body = f"Hello {user.username},\n\nTo reset your password, click the link below:\n{reset_url}\n\nIf you did not request this, ignore this email.\n\nThis link expires in 1 hour."
+        send_email(user.email, "Password Reset Request", body)
     return (
         jsonify({
             "message": "If an account exists with this email, a password reset link has been sent."
         }),
         200,
     )
+
+@app.route('/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json() or {}
+    token = data.get('token')
+    new_password = data.get('password')
+    if not (token and new_password):
+
+            # Endpoint for default user to request manager role
+        return jsonify({"error": "Token and password required"}), 400
+    prt = PasswordResetToken.query.filter(and_(PasswordResetToken.token == token, PasswordResetToken.used == False)).first()
+    if not prt or prt.expires_at < datetime.utcnow():
+        return jsonify({"error": "Invalid or expired token"}), 400
+    user = User.query.get(prt.user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    user.set_password(new_password)
+    prt.used = True
+    db.session.add(user)
+
+    db.session.add(prt)
+    db.session.commit()
+    return jsonify({"message": "Password reset successful"})
 
 @app.route('/auth/me', methods=['GET'])
 @jwt_required()
@@ -174,6 +260,136 @@ def get_current_user():
         jsonify({"user": user.to_json()}),
         200,
     )
+
+
+
+def _get_user_role(user_id: int) -> str:
+    user = User.query.get(user_id)
+    return user.role if user else None
+
+def _require_role(user_id: int, allowed_roles):
+    role = _get_user_role(user_id)
+    return role in allowed_roles
+
+
+@app.route('/admin/users', methods=['GET'])
+@jwt_required()
+def admin_list_users():
+    try:
+        requester_id = int(get_jwt_identity())
+        if not _require_role(requester_id, ["admin"]):
+            return (jsonify({"error": "Admin access required"}), 403)
+
+        q = request.args.get('q', '').strip()
+        query = User.query
+        if q:
+            like = f"%{q}%"
+            query = query.filter((User.username.ilike(like)) | (User.email.ilike(like)))
+
+        users = query.all()
+        return (jsonify({"users": [u.to_json() for u in users]}), 200)
+    except Exception as e:
+        app.logger.error(f"Error listing users: {str(e)}")
+        return (jsonify({"error": "Failed to list users", "details": str(e)}), 500)
+
+
+@app.route('/admin/users/<int:target_id>', methods=['GET', 'PATCH', 'DELETE'])
+@jwt_required()
+def admin_user_detail(target_id):
+    try:
+        requester_id = int(get_jwt_identity())
+        if not _require_role(requester_id, ["admin"]):
+            return (jsonify({"error": "Admin access required"}), 403)
+
+        user = User.query.get(target_id)
+        if not user:
+            return (jsonify({"error": "User not found"}), 404)
+
+        if request.method == 'GET':
+            return (jsonify({"user": user.to_json()}), 200)
+
+        if request.method == 'PATCH':
+            data = request.get_json() or {}
+            # Allow updating username, email, phone, is_admin, password
+            if 'username' in data:
+                user.username = data['username']
+            if 'email' in data:
+                user.email = data['email']
+            if 'phone' in data:
+                user.phone = data['phone']
+            if 'role' in data:
+                user.role = data['role']
+            if 'password' in data and data['password']:
+                user.set_password(data['password'])
+
+            db.session.add(user)
+            db.session.commit()
+            return (jsonify({"message": "User updated", "user": user.to_json()}), 200)
+
+        if request.method == 'DELETE':
+            db.session.delete(user)
+            db.session.commit()
+            return (jsonify({"message": "User deleted"}), 200)
+
+    except Exception as e:
+        app.logger.error(f"Error in admin user detail: {str(e)}")
+        return (jsonify({"error": "Admin operation failed", "details": str(e)}), 500)
+
+
+# MANAGER: Manage employees and permissions
+@app.route('/manager/employees', methods=['GET', 'POST'])
+@jwt_required()
+def manager_employees():
+    requester_id = int(get_jwt_identity())
+    if not _require_role(requester_id, ["manager", "admin"]):
+        return (jsonify({"error": "Manager or admin access required"}), 403)
+
+    if request.method == 'GET':
+        # List employees managed by this manager
+        perms = EmployeePermission.query.filter_by(manager_id=requester_id).all()
+        employees = [User.query.get(p.employee_id).to_json() for p in perms]
+        return jsonify({"employees": employees, "permissions": [p.to_json() for p in perms]})
+
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        email = data.get('email')
+        employee = User.query.filter_by(email=email).first()
+        if not employee:
+            return jsonify({"error": "No user with that email"}), 404
+        if employee.role not in ["employee", "default"]:
+            return jsonify({"error": "User is not an employee or default"}), 400
+        # Promote to employee if needed
+        if employee.role == "default":
+            employee.role = "employee"
+            db.session.add(employee)
+        # Add permission row
+        perm = EmployeePermission(manager_id=requester_id, employee_id=employee.id)
+        db.session.add(perm)
+        db.session.commit()
+        return jsonify({"message": "Employee added", "employee": employee.to_json(), "permission": perm.to_json()}), 201
+
+# Update or remove employee permissions
+@app.route('/manager/employees/<int:employee_id>', methods=['PATCH', 'DELETE'])
+@jwt_required()
+def manager_employee_detail(employee_id):
+    requester_id = int(get_jwt_identity())
+    if not _require_role(requester_id, ["manager", "admin"]):
+        return (jsonify({"error": "Manager or admin access required"}), 403)
+    perm = EmployeePermission.query.filter_by(manager_id=requester_id, employee_id=employee_id).first()
+    if not perm:
+        return jsonify({"error": "No such employee for this manager"}), 404
+    if request.method == 'PATCH':
+        data = request.get_json() or {}
+        for field in ["can_view_inventory", "can_edit_inventory", "can_see_finances", "can_add_items", "can_remove_items"]:
+            if field in data:
+                setattr(perm, field, bool(data[field]))
+        db.session.add(perm)
+        db.session.commit()
+        return jsonify({"message": "Permissions updated", "permission": perm.to_json()})
+    if request.method == 'DELETE':
+        db.session.delete(perm)
+        db.session.commit()
+        return jsonify({"message": "Employee removed"})
 
 
 @app.route('/inventory/current', methods=['GET'])

@@ -42,6 +42,16 @@ function Navigation() {
             <li className="nav-item">
               <Link to="/finances" className="nav-link">Finances</Link>
             </li>
+            {user?.role === 'admin' && (
+              <li className="nav-item">
+                <Link to="/admin" className="nav-link">Admin</Link>
+              </li>
+            )}
+            {user?.role === 'manager' && (
+              <li className="nav-item">
+                <Link to="/manager" className="nav-link">Manager</Link>
+              </li>
+            )}
           </ul>
         )}
         <ul className="nav-auth">
