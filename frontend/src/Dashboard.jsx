@@ -1,11 +1,9 @@
 import { useAuth } from './AuthContext'
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect } from 'react'
 import './Dashboard.css'
-import { AuthContext } from './AuthContext'
 
 function Dashboard() {
-  const { user, setUser } = useContext(AuthContext)
-  const { user: authUser } = useAuth()
+  const { user, setUser } = useAuth()
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
