@@ -1,19 +1,4 @@
-# Endpoint for manager to list their invitations
-@app.route('/api/manager/invitations', methods=['GET'])
-@jwt_required()
-def list_invitations():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user or user.role != 'manager':
-        return jsonify({'error': 'Unauthorized'}), 403
-    invitations = ManagerInvitation.query.filter_by(manager_id=user.id).all()
-    return jsonify({'invitations': [
-        {
-            'id': inv.id,
-            'email': inv.email,
-            'accepted': inv.accepted
-        } for inv in invitations
-    ]})
+
 # ...existing imports...
 from flask import url_for
 import uuid
@@ -35,6 +20,23 @@ from schemas import (
 from datetime import datetime
 from sqlalchemy import func
 import os
+
+# Endpoint for manager to list their invitations
+@app.route('/api/manager/invitations', methods=['GET'])
+@jwt_required()
+def list_invitations():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+    invitations = ManagerInvitation.query.filter_by(manager_id=user.id).all()
+    return jsonify({'invitations': [
+        {
+            'id': inv.id,
+            'email': inv.email,
+            'accepted': inv.accepted
+        } for inv in invitations
+    ]})
 
 # JWT error handlers
 @app.errorhandler(422)
