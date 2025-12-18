@@ -7,32 +7,7 @@ const defaultPerms = {
   can_edit_inventory: false,
   can_see_finances: false,
   can_add_items: false,
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteStatus, setInviteStatus] = useState('');
-    const [invitations, setInvitations] = useState([]);
-}
-    useEffect(() => {
-      fetch('/api/manager/invitations', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      })
-        .then(res => res.json())
-        .then(data => setInvitations(data.invitations || []));
-    }, []);
-
-    const handleInvite = async () => {
-      setInviteStatus('Sending...');
-      const res = await fetch('/api/manager/invite-employee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ email: inviteEmail })
-      });
-      if (res.ok) {
-        setInviteStatus('Invitation sent!');
-        setInviteEmail('');
-      } else {
-        setInviteStatus('Failed to send invitation.');
-      }
-    };
+};
 
 function ManagerDashboard() {
   const { token, user } = useAuth()
@@ -41,9 +16,14 @@ function ManagerDashboard() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Invite-related state
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteStatus, setInviteStatus] = useState('')
+  const [invitations, setInvitations] = useState([])
 
   useEffect(() => {
     fetchEmployees()
+    fetchInvitations()
   }, [])
 
   const fetchEmployees = async () => {
@@ -59,25 +39,35 @@ function ManagerDashboard() {
     } catch (e) {
       setError('Failed to load employees')
     } finally {
-        <div style={{ marginBottom: 20 }}>
-          <input
-            type="email"
-            placeholder="Employee email"
-            value={inviteEmail}
-            onChange={e => setInviteEmail(e.target.value)}
-          />
-          <button onClick={handleInvite} disabled={!inviteEmail}>Invite Employee</button>
-          <span style={{ marginLeft: 10 }}>{inviteStatus}</span>
-        </div>
-        <div>
-          <h4>Pending Invitations</h4>
-          <ul>
-            {invitations.map(inv => (
-              <li key={inv.id}>{inv.email} - {inv.accepted ? 'Accepted' : 'Pending'}</li>
-            ))}
-          </ul>
-        </div>
       setLoading(false)
+    }
+  }
+
+  const fetchInvitations = async () => {
+    try {
+      const res = await fetch('/api/manager/invitations', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      })
+      const data = await res.json()
+      setInvitations(data.invitations || [])
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const handleInvite = async () => {
+    setInviteStatus('Sending...')
+    const res = await fetch('/api/manager/invite-employee', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ email: inviteEmail })
+    })
+    if (res.ok) {
+      setInviteStatus('Invitation sent!')
+      setInviteEmail('')
+      fetchInvitations()
+    } else {
+      setInviteStatus('Failed to send invitation.')
     }
   }
 
@@ -136,6 +126,24 @@ function ManagerDashboard() {
   return (
     <div className="admin-container">
       <h1>Manager Dashboard</h1>
+      <div style={{ marginBottom: 20 }}>
+        <input
+          type="email"
+          placeholder="Employee email"
+          value={inviteEmail}
+          onChange={e => setInviteEmail(e.target.value)}
+        />
+        <button onClick={handleInvite} disabled={!inviteEmail}>Invite Employee</button>
+        <span style={{ marginLeft: 10 }}>{inviteStatus}</span>
+      </div>
+      <div>
+        <h4>Pending Invitations</h4>
+        <ul>
+          {invitations.map(inv => (
+            <li key={inv.id}>{inv.email} - {inv.accepted ? 'Accepted' : 'Pending'}</li>
+          ))}
+        </ul>
+      </div>
       <form onSubmit={addEmployee} className="admin-search">
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Employee email" required />
         <button type="submit">Add Employee</button>
