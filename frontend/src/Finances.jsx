@@ -8,6 +8,7 @@ function Finances() {
   const [editingExpenses, setEditingExpenses] = useState(false)
   const [expensesInput, setExpensesInput] = useState('')
   const [timePeriod, setTimePeriod] = useState('7')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchFinances()
@@ -150,7 +151,27 @@ function Finances() {
           ))}
         </div>
         <div className="sales-details">
-          <h4>Detailed Sales Data</h4>
+          <div className="sales-details-header">
+            <h4>Detailed Sales Data</h4>
+            <div className="search-bar">
+              <input
+                type="text"
+                placeholder="Search by date (e.g., Dec 18, 12/18, 2025)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')} 
+                  className="clear-search-btn"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
           <div className="sales-table-container">
             <table className="sales-table">
               <thead>
@@ -161,19 +182,47 @@ function Finances() {
                 </tr>
               </thead>
               <tbody>
-                {salesData.map((day, index) => (
-                  <tr key={index}>
-                    <td>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                    <td>{formatCurrency(day.revenue)}</td>
-                    <td>{day.items_sold || 0}</td>
-                  </tr>
-                ))}
+                {salesData
+                  .filter(day => {
+                    if (!searchTerm) return true
+                    const dateStr = new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    const dateStr2 = new Date(day.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
+                    const searchLower = searchTerm.toLowerCase()
+                    return dateStr.toLowerCase().includes(searchLower) || dateStr2.includes(searchLower)
+                  })
+                  .map((day, index) => (
+                    <tr key={index}>
+                      <td>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                      <td>{formatCurrency(day.revenue)}</td>
+                      <td>{day.items_sold || 0}</td>
+                    </tr>
+                  ))}
               </tbody>
               <tfoot>
                 <tr className="total-row">
-                  <td><strong>Total</strong></td>
-                  <td><strong>{formatCurrency(salesData.reduce((sum, day) => sum + day.revenue, 0))}</strong></td>
-                  <td><strong>{salesData.reduce((sum, day) => sum + (day.items_sold || 0), 0)}</strong></td>
+                  <td><strong>Total{searchTerm ? ' (Filtered)' : ''}</strong></td>
+                  <td><strong>{formatCurrency(
+                    salesData
+                      .filter(day => {
+                        if (!searchTerm) return true
+                        const dateStr = new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        const dateStr2 = new Date(day.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
+                        const searchLower = searchTerm.toLowerCase()
+                        return dateStr.toLowerCase().includes(searchLower) || dateStr2.includes(searchLower)
+                      })
+                      .reduce((sum, day) => sum + day.revenue, 0)
+                  )}</strong></td>
+                  <td><strong>{
+                    salesData
+                      .filter(day => {
+                        if (!searchTerm) return true
+                        const dateStr = new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        const dateStr2 = new Date(day.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
+                        const searchLower = searchTerm.toLowerCase()
+                        return dateStr.toLowerCase().includes(searchLower) || dateStr2.includes(searchLower)
+                      })
+                      .reduce((sum, day) => sum + (day.items_sold || 0), 0)
+                  }</strong></td>
                 </tr>
               </tfoot>
             </table>
