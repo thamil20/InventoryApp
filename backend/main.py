@@ -471,19 +471,24 @@ def _check_employee_permission(user_id: int, permission_name: str) -> bool:
     user = User.query.get(user_id)
     if not user:
         return False
-    
+
     # Managers and admins have all permissions
     if user.role in ['manager', 'admin']:
         return True
-    
+
+    # Default users have basic permissions (view inventory, add items, see finances)
+    if user.role == 'default':
+        basic_permissions = ['can_view_inventory', 'can_add_items', 'can_see_finances']
+        return permission_name in basic_permissions
+
     # Employees need to check their permissions
     if user.role == 'employee':
         perm = EmployeePermission.query.filter_by(employee_id=user_id).first()
         if perm:
             return getattr(perm, permission_name, False)
         return False
-    
-    # Default users have no permissions
+
+    # Other roles have no permissions
     return False
 
 def _get_effective_user_id(user_id: int) -> int:
