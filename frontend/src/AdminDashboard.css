@@ -72,8 +72,192 @@
 
 .error {
   color: #f44336;
+  margin: 15px 0;
+  padding: 12px;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 6px;
+}
+
+/* Manager Dashboard Styles */
+.manager-section {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.manager-section h3 {
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.invite-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invite-form input,
+.form-input {
+  flex: 1;
+  max-width: 400px;
+  padding: 10px 12px;
+  border: 2px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.invite-form input:focus,
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.form-button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.form-button:hover {
+  background: #0056b3;
+}
+
+.form-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.invite-status {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.invitations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.invitation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.invitation-item:last-child {
+  border-bottom: none;
+}
+
+.invitation-email {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.invitation-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.invitation-status:has-text('Accepted') {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.permissions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.permission-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.permission-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.permission-label span {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.action-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s;
+  font-weight: 500;
+}
+
+.action-button:hover {
+  background: var(--border-color);
+}
+
+.remove-button {
+  background: #f44336;
+  color: white;
+}
+
+.remove-button:hover {
+  background: #d32f2f;
+}
+
+.loading-text {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px;
 }
 
 @media (max-width: 768px) {
-  .admin-search { flex-direction: column; }
+  .admin-search { 
+    flex-direction: column; 
+  }
+  
+  .invite-form {
+    flex-direction: column;
+  }
+  
+  .invite-form input,
+  .form-input {
+    max-width: 100%;
+  }
+  
+  .permissions-cell {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .invitation-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
