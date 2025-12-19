@@ -73,21 +73,17 @@ function ManagerDashboard() {
     }
   }
 
-  const addEmployee = async (e) => {
-    e.preventDefault()
-    setError('')
+  const deleteInvitation = async (invId) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/manager/employees`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email })
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/manager/invitations/${invId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to add employee')
-      setEmail('')
-      fetchEmployees()
-    } catch (err) {
-      setError(err.message)
+      if (res.ok) {
+        fetchInvitations()
+      }
+    } catch (e) {
+      console.error('Failed to delete invitation:', e)
     }
   }
 
@@ -99,7 +95,10 @@ function ManagerDashboard() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ [field]: value })
       })
-      if (!res.ok) throw new Error('Failed to update permissions')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update permissions')
+      }
       fetchEmployees()
     } catch (err) {
       setError(err.message)
@@ -160,26 +159,18 @@ function ManagerDashboard() {
               <li key={inv.id} className="invitation-item">
                 <span className="invitation-email">{inv.email}</span>
                 <span className="invitation-status">{inv.accepted ? 'Accepted' : 'Pending'}</span>
+                <button 
+                  onClick={() => deleteInvitation(inv.id)} 
+                  className="action-button remove-button"
+                  style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
         </div>
       )}
-
-      {/* Add Employee Section */}
-      <div className="manager-section">
-        <h3>Add Employee</h3>
-        <form onSubmit={addEmployee} className="admin-search">
-          <input 
-            value={email} 
-            onChange={e => setEmail(e.target.value)} 
-            placeholder="Employee email" 
-            required 
-            className="form-input"
-          />
-          <button type="submit" className="form-button">Add Employee</button>
-        </form>
-      </div>
 
       {error && <p className="error">{error}</p>}
       {loading ? <p className="loading-text">Loading...</p> : null}

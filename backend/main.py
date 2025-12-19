@@ -39,6 +39,21 @@ def list_invitations():
         } for inv in invitations
     ]})
 
+# Endpoint for manager to delete an invitation
+@app.route('/manager/invitations/<int:invitation_id>', methods=['DELETE'])
+@jwt_required()
+def delete_invitation(invitation_id):
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or user.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+    invitation = ManagerInvitation.query.filter_by(id=invitation_id, manager_id=user.id).first()
+    if not invitation:
+        return jsonify({'error': 'Invitation not found'}), 404
+    db.session.delete(invitation)
+    db.session.commit()
+    return jsonify({'message': 'Invitation deleted'})
+
 # Endpoint for manager to invite employee by email
 @app.route('/manager/invite-employee', methods=['POST'])
 @jwt_required()
@@ -399,6 +414,26 @@ def _require_role(user_id: int, allowed_roles):
     role = _get_user_role(user_id)
     return role in allowed_roles
 
+def _check_employee_permission(user_id: int, permission_name: str) -> bool:
+    """Check if an employee has a specific permission. Returns True for managers/admins."""
+    user = User.query.get(user_id)
+    if not user:
+        return False
+    
+    # Managers and admins have all permissions
+    if user.role in ['manager', 'admin']:
+        return True
+    
+    # Employees need to check their permissions
+    if user.role == 'employee':
+        perm = EmployeePermission.query.filter_by(employee_id=user_id).first()
+        if perm:
+            return getattr(perm, permission_name, False)
+        return False
+    
+    # Default users have no permissions
+    return False
+
 
 @app.route('/admin/users', methods=['GET'])
 @jwt_required()
@@ -526,6 +561,11 @@ def get_current_inventory():
     try:
         user_id = int(get_jwt_identity())
         app.logger.debug(f"Get inventory - User ID from JWT: {user_id}")
+        
+        # Check if employee has permission to view inventory
+        if not _check_employee_permission(user_id, 'can_view_inventory'):
+            return jsonify({"error": "You don't have permission to view inventory"}), 403
+        
         current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
         app.logger.debug(f"Found {len(current_inventory)} items for user {user_id}")
         json_inventory = list(map(lambda item: item.to_json(), current_inventory))
@@ -544,6 +584,11 @@ def get_current_inventory():
 @jwt_required()
 def get_sold_items():
     user_id = int(get_jwt_identity())
+    
+    # Check if employee has permission
+    if not _check_employee_permission(user_id, 'can_see_finances'):
+        return jsonify({"error": "You don't have permission to view sold items"}), 403
+    
     sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
     json_sold_items = list(map(lambda item: item.to_json(), sold_items))
     return (
@@ -559,6 +604,10 @@ def create_item():
     data = request.validated_data
     app.logger.debug(f"User ID from JWT: {user_id}")
     app.logger.debug(f"Request data: {data}")
+    
+    # Check if employee has permission to add items
+    if not _check_employee_permission(user_id, 'can_add_items'):
+        return jsonify({"error": "You don't have permission to add items"}), 403
     
     # Verify user exists
     user = User.query.get(user_id)
@@ -667,6 +716,11 @@ def sell_item(item_id):
 @jwt_required()
 def update_item(item_id):
     user_id = int(get_jwt_identity())
+    
+    # Check if employee has permission to edit inventory
+    if not _check_employee_permission(user_id, 'can_edit_inventory'):
+        return jsonify({"error": "You don't have permission to edit items"}), 403
+    
     item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
@@ -702,6 +756,11 @@ def update_item(item_id):
 @jwt_required()
 def delete_item(item_id):
     user_id = int(get_jwt_identity())
+    
+    # Check if employee has permission to remove items
+    if not _check_employee_permission(user_id, 'can_remove_items'):
+        return jsonify({"error": "You don't have permission to delete items"}), 403
+    
     item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
     if not item:
         return (
@@ -741,6 +800,10 @@ def renumber_items():
 def get_finances():
     try:
         user_id = int(get_jwt_identity())
+        
+        # Check if employee has permission to see finances
+        if not _check_employee_permission(user_id, 'can_see_finances'):
+            return jsonify({"error": "You don't have permission to view finances"}), 403
         
         # Get days parameter from query string (default to 7)
         days_param = request.args.get('days', '7')
