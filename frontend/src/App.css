@@ -16,11 +16,33 @@
   transition: all 0.3s ease;
 }
 
-
 .card {
   padding: 2em;
 }
 
 .read-the-docs {
   color: #888;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  #root {
+    padding: 1rem;
+    padding-top: 60px;
+  }
+
+  .card {
+    padding: 1.5em;
+  }
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: 0.5rem;
+    padding-top: 70px;
+  }
+
+  .card {
+    padding: 1em;
+  }
 }
