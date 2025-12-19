@@ -1090,6 +1090,8 @@ def export_finances_data():
         
         writer.writerow([])
         writer.writerow(['Total Revenue:', f'${total_revenue:.2f}'])
+        writer.writerow(['Total Expenses:', f'${user.expenses:.2f}'])
+        writer.writerow(['Net Profit:', f'${total_revenue - user.expenses:.2f}'])
         writer.writerow([])
         
         # Write current inventory section
