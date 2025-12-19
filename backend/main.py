@@ -95,31 +95,41 @@ def invite_employee():
 # Endpoint for employee to accept invitation (no auth required)
 @app.route('/accept-invitation/<token>', methods=['GET'])
 def accept_invitation(token):
+    frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    
     invitation = ManagerInvitation.query.filter_by(token=token, accepted=False).first()
     if not invitation:
-        # Redirect to dashboard with invalid indicator
-        frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-        return redirect(f"{frontend}/dashboard?invite=invalid")
-    user = User.query.filter_by(email=invitation.email).first()
+        # Check if already accepted
+        already_accepted = ManagerInvitation.query.filter_by(token=token, accepted=True).first()
+        if already_accepted:
+            # Already accepted, just redirect to dashboard
+            return redirect(f"{frontend}/?invite=accepted")
+        # Invalid or expired
+        return redirect(f"{frontend}/?invite=error")
+    
+    # Case-insensitive email lookup
+    user = User.query.filter(User.email.ilike(invitation.email)).first()
     if not user:
-        frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-        return redirect(f"{frontend}/dashboard?invite=register")
+        return redirect(f"{frontend}/?invite=error")
+    
     # Promote to employee if default
     if user.role == 'default':
         user.role = 'employee'
         db.session.add(user)
+    
     # Add permission row if not exists
     existing = EmployeePermission.query.filter_by(manager_id=invitation.manager_id, employee_id=user.id).first()
     if not existing:
         perm = EmployeePermission(manager_id=invitation.manager_id, employee_id=user.id)
         db.session.add(perm)
+    
     # Mark invitation accepted
     invitation.accepted = True
     db.session.add(invitation)
     db.session.commit()
+    
     # Redirect to dashboard; frontend can read invite=accepted to show manager data
-    frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-    return redirect(f"{frontend}/dashboard?invite=accepted")
+    return redirect(f"{frontend}/?invite=accepted")
 
 # Endpoint for employee to decline invitation (no auth required)
 @app.route('/decline-invitation/<token>', methods=['GET'])
@@ -127,7 +137,7 @@ def decline_invitation(token):
     invitation = ManagerInvitation.query.filter_by(token=token).first()
     frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
     if not invitation:
-        return redirect(f"{frontend}/dashboard?invite=invalid")
+        return redirect(f"{frontend}/?invite=error")
     try:
         # Invalidate invitation by deleting it so it can't be reused
         db.session.delete(invitation)
@@ -137,7 +147,7 @@ def decline_invitation(token):
         invitation.accepted = False
         db.session.add(invitation)
         db.session.commit()
-    return redirect(f"{frontend}/dashboard?invite=denied")
+    return redirect(f"{frontend}/?invite=declined")
 
 # Endpoint for default user to request manager role
 @app.route('/request-manager', methods=['POST'])
@@ -406,6 +416,14 @@ def get_current_user():
             jsonify({"error": "User not found"}),
             404,
         )
+    
+    # Auto-fix: If user is 'default' but has an employee permission record, promote them to employee
+    if user.role == 'default':
+        perm = EmployeePermission.query.filter_by(employee_id=user.id).first()
+        if perm:
+            user.role = 'employee'
+            db.session.add(user)
+            db.session.commit()
     
     user_data = user.to_json()
     
