@@ -51,21 +51,26 @@ function Dashboard() {
   }
 
   const handleManagerRequest = async () => {
-    setRequesting(true)
+    const confirmed = window.confirm('Are you sure you want to become a manager? This will grant manager permissions.');
+    if (!confirmed) return;
+    setRequesting(true);
+    setError(null);
     try {
-      const res = await fetch('/api/request-manager', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/request-manager`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      })
-      if (res.ok) {
-        setRequestSent(true)
-        // Optionally update user context
-        setUser({ ...user, role: 'manager' })
+      });
+      if (!res.ok) {
+        let msg = 'Failed to become manager';
+        try { const data = await res.json(); msg = data.error || msg; } catch (_) {}
+        throw new Error(msg);
       }
+      setRequestSent(true);
+      setUser(prev => ({ ...(prev || {}), role: 'manager' }));
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setRequesting(false)
+      setRequesting(false);
     }
   }
 
@@ -80,11 +85,11 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       {user?.role === 'default' && (
-        <div style={{ position: 'absolute', top: 20, right: 20 }}>
+        <div className="become-manager-btn-container">
           {requestSent ? (
-            <button disabled>Request Sent!</button>
+            <button className="become-manager-btn" disabled>Role updated to Manager</button>
           ) : (
-            <button onClick={handleManagerRequest} disabled={requesting}>
+            <button className="become-manager-btn" onClick={handleManagerRequest} disabled={requesting}>
               {requesting ? 'Requesting...' : 'Click to become a manager'}
             </button>
           )}

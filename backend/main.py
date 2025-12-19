@@ -1,11 +1,12 @@
 
 # ...existing imports...
 from flask import url_for
+from flask import redirect
 import uuid
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from config import app, db, limiter
-from models import Current_Inventory, Sold_Items, User, EmployeePermission
+from models import Current_Inventory, Sold_Items, User, EmployeePermission, ManagerInvitation
 from models import db
 from flask_migrate import Migrate
 
@@ -37,6 +38,82 @@ def list_invitations():
             'accepted': inv.accepted
         } for inv in invitations
     ]})
+
+# Endpoint for manager to invite employee by email
+@app.route('/api/manager/invite-employee', methods=['POST'])
+@jwt_required()
+def invite_employee():
+    user_id = int(get_jwt_identity())
+    manager = User.query.get(user_id)
+    if not manager or manager.role != 'manager':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json() or {}
+    email = data.get('email')
+    if not email:
+        return jsonify({'error': 'Email required'}), 400
+    # Create invitation
+    token = str(uuid.uuid4())
+    invitation = ManagerInvitation(email=email, manager_id=manager.id, token=token)
+    db.session.add(invitation)
+    db.session.commit()
+    # Send email with accept link
+    accept_url = url_for('accept_invitation', token=token, _external=True)
+    decline_url = url_for('decline_invitation', token=token, _external=True)
+    body = (
+        f"Hello,\n\nYou have been invited by {manager.username} ({manager.email}) to join their team as an employee.\n"
+        f"Accept: {accept_url}\n"
+        f"Decline: {decline_url}\n\n"
+        "If you don't have an account yet, please register first, then click the link again."
+    )
+    send_email(email, 'Invitation to join as employee', body)
+    return jsonify({'message': 'Invitation sent'})
+
+# Endpoint for employee to accept invitation (no auth required)
+@app.route('/api/accept-invitation/<token>', methods=['GET'])
+def accept_invitation(token):
+    invitation = ManagerInvitation.query.filter_by(token=token, accepted=False).first()
+    if not invitation:
+        # Redirect to dashboard with invalid indicator
+        frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+        return redirect(f"{frontend}/dashboard?invite=invalid")
+    user = User.query.filter_by(email=invitation.email).first()
+    if not user:
+        frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+        return redirect(f"{frontend}/dashboard?invite=register")
+    # Promote to employee if default
+    if user.role == 'default':
+        user.role = 'employee'
+        db.session.add(user)
+    # Add permission row if not exists
+    existing = EmployeePermission.query.filter_by(manager_id=invitation.manager_id, employee_id=user.id).first()
+    if not existing:
+        perm = EmployeePermission(manager_id=invitation.manager_id, employee_id=user.id)
+        db.session.add(perm)
+    # Mark invitation accepted
+    invitation.accepted = True
+    db.session.add(invitation)
+    db.session.commit()
+    # Redirect to dashboard; frontend can read invite=accepted to show manager data
+    frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    return redirect(f"{frontend}/dashboard?invite=accepted")
+
+# Endpoint for employee to decline invitation (no auth required)
+@app.route('/api/decline-invitation/<token>', methods=['GET'])
+def decline_invitation(token):
+    invitation = ManagerInvitation.query.filter_by(token=token).first()
+    frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    if not invitation:
+        return redirect(f"{frontend}/dashboard?invite=invalid")
+    try:
+        # Invalidate invitation by deleting it so it can't be reused
+        db.session.delete(invitation)
+        db.session.commit()
+    except Exception:
+        # Fallback to mark as not accepted
+        invitation.accepted = False
+        db.session.add(invitation)
+        db.session.commit()
+    return redirect(f"{frontend}/dashboard?invite=denied")
 
 # JWT error handlers
 @app.errorhandler(422)
@@ -165,25 +242,27 @@ class PasswordResetToken(db.Model):
     used = db.Column(db.Boolean, default=False, nullable=False)
 
 def send_email(to_email, subject, body):
-    # Use environment variables for config
+    # Use environment variables for config (MAIL_*)
     import os
-    SMTP_HOST = os.environ.get('SMTP_HOST')
-    SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-    SMTP_USER = os.environ.get('SMTP_USER')
-    SMTP_PASS = os.environ.get('SMTP_PASS')
-    FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USER)
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASS):
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1','true','yes')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
+    if not (MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD):
         app.logger.error('SMTP config missing')
         return False
     msg = MIMEText(body)
     msg['Subject'] = subject
-    msg['From'] = FROM_EMAIL
+    msg['From'] = MAIL_DEFAULT_SENDER
     msg['To'] = to_email
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+            if MAIL_USE_TLS:
+                server.starttls()
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            server.sendmail(MAIL_DEFAULT_SENDER, [to_email], msg.as_string())
         return True
     except Exception as e:
         app.logger.error(f"Failed to send email: {e}")
@@ -207,7 +286,6 @@ def forgot_password():
         # Send email
         reset_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token={token}"
 
-            # Endpoint for employee to accept invitation
         body = f"Hello {user.username},\n\nTo reset your password, click the link below:\n{reset_url}\n\nIf you did not request this, ignore this email.\n\nThis link expires in 1 hour."
         send_email(user.email, "Password Reset Request", body)
     return (
@@ -223,8 +301,6 @@ def reset_password():
     token = data.get('token')
     new_password = data.get('password')
     if not (token and new_password):
-
-            # Endpoint for default user to request manager role
         return jsonify({"error": "Token and password required"}), 400
     prt = PasswordResetToken.query.filter(and_(PasswordResetToken.token == token, PasswordResetToken.used == False)).first()
     if not prt or prt.expires_at < datetime.utcnow():
