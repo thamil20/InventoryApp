@@ -95,7 +95,7 @@ function Dashboard() {
         </div>
       )}
       <h1>Dashboard</h1>
-      <p className="welcome-message">Welcome back, {user?.username}!</p>
+      <p className="welcome-message">Welcome back {user?.username}, you are a(n) {user?.role}</p>
 
       {/* Profit Card */}
       <div className="profit-section">
