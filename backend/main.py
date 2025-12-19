@@ -71,9 +71,22 @@ def invite_employee():
     invitation = ManagerInvitation(email=email, manager_id=manager.id, token=token)
     db.session.add(invitation)
     db.session.commit()
-    # Send email with accept link
-    accept_url = url_for('accept_invitation', token=token, _external=True)
-    decline_url = url_for('decline_invitation', token=token, _external=True)
+    # Send email with accept link - construct proper URLs for production
+    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    
+    # Ensure frontend_url has protocol
+    if not frontend_url.startswith('http'):
+        frontend_url = 'https://' + frontend_url
+    
+    # For production, backend is same domain; for dev, use port 5000
+    if 'localhost' in frontend_url:
+        backend_url = 'http://localhost:5000'
+    else:
+        backend_url = frontend_url
+    
+    accept_url = f"{backend_url}/accept-invitation/{token}"
+    decline_url = f"{backend_url}/decline-invitation/{token}"
+    
     body = (
         f"Hello,\n\nYou have been invited by {manager.username} ({manager.email}) to join their team as an employee.\n"
         f"Accept: {accept_url}\n"
