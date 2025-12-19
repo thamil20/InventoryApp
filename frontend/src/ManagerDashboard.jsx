@@ -10,7 +10,7 @@ const defaultPerms = {
 };
 
 function ManagerDashboard() {
-  const { token, user } = useAuth()
+  const { token, user, loading: authLoading } = useAuth()
   const [employees, setEmployees] = useState([])
   const [perms, setPerms] = useState([])
   const [email, setEmail] = useState('')
@@ -22,9 +22,11 @@ function ManagerDashboard() {
   const [invitations, setInvitations] = useState([])
 
   useEffect(() => {
-    fetchEmployees()
-    fetchInvitations()
-  }, [])
+    if (!authLoading && user) {
+      fetchEmployees()
+      fetchInvitations()
+    }
+  }, [authLoading, user])
 
   const fetchEmployees = async () => {
     setLoading(true)
@@ -117,6 +119,10 @@ function ManagerDashboard() {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  if (authLoading) {
+    return <div className="admin-container"><p>Loading...</p></div>
   }
 
   if (!user || (user.role !== 'manager' && user.role !== 'admin')) {

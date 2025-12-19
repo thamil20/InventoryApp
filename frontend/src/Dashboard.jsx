@@ -65,11 +65,10 @@ function Dashboard() {
         try { const data = await res.json(); msg = data.error || msg; } catch (_) {}
         throw new Error(msg);
       }
-      setRequestSent(true);
+      // Update user context immediately to prevent state updates on unmounted component
       setUser(prev => ({ ...(prev || {}), role: 'manager' }));
     } catch (err) {
       setError(err.message);
-    } finally {
       setRequesting(false);
     }
   }
