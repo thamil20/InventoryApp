@@ -76,7 +76,7 @@ function AdminDashboard() {
     }
   }
 
-  if (!user || !user.is_admin) {
+  if (!user || user.role !== 'admin') {
     return <div className="admin-container"><p>Admin access required.</p></div>
   }
 
