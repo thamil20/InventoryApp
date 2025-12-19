@@ -60,7 +60,7 @@ function Finances() {
 
   const fetchExportHistory = async () => {
     // Only fetch if user has permission
-    if (!user || !['default', 'manager'].includes(user.role)) {
+    if (!user || !['default', 'manager', 'admin'].includes(user.role)) {
       return
     }
     
@@ -434,7 +434,7 @@ function Finances() {
       </div>
 
       {/* Export Button - Only for defaults and managers */}
-      {user && ['default', 'manager'].includes(user.role) && (
+      {user && ['default', 'manager', 'admin'].includes(user.role) && (
         <div className="export-section">
           <button 
             onClick={() => setShowExportModal(true)} 
@@ -451,7 +451,7 @@ function Finances() {
       </div>
 
       {/* Export History Table - Only for defaults and managers */}
-      {user && ['default', 'manager'].includes(user.role) && (
+      {user && ['default', 'manager', 'admin'].includes(user.role) && (
         <div className="export-history-section">
           <h2>Export History</h2>
           {loadingExports ? (

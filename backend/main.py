@@ -6,7 +6,7 @@ import uuid
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from config import app, db, limiter
-from models import Current_Inventory, Sold_Items, User, EmployeePermission, ManagerInvitation
+from models import Current_Inventory, Sold_Items, User, EmployeePermission, ManagerInvitation, DataExport
 from models import db
 from flask_migrate import Migrate
 
