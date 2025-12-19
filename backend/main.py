@@ -614,6 +614,10 @@ def admin_user_detail(target_id):
                 export_count = DataExport.query.filter_by(user_id=target_id).delete()
                 app.logger.info(f"Deleted {export_count} export records")
                 
+                # Delete all password reset tokens for this user
+                token_count = PasswordResetToken.query.filter_by(user_id=target_id).delete()
+                app.logger.info(f"Deleted {token_count} password reset tokens")
+                
                 # Finally delete the user
                 app.logger.info(f"Deleting user record for {user.username}")
                 db.session.delete(user)
