@@ -132,63 +132,112 @@ function ManagerDashboard() {
   return (
     <div className="admin-container">
       <h1>Manager Dashboard</h1>
-      <div style={{ marginBottom: 20 }}>
-        <input
-          type="email"
-          placeholder="Employee email"
-          value={inviteEmail}
-          onChange={e => setInviteEmail(e.target.value)}
-        />
-        <button onClick={handleInvite} disabled={!inviteEmail}>Invite Employee</button>
-        <span style={{ marginLeft: 10 }}>{inviteStatus}</span>
+      
+      {/* Invite Section */}
+      <div className="manager-section">
+        <h3>Invite Employee</h3>
+        <div className="invite-form">
+          <input
+            type="email"
+            placeholder="Employee email"
+            value={inviteEmail}
+            onChange={e => setInviteEmail(e.target.value)}
+            className="form-input"
+          />
+          <button onClick={handleInvite} disabled={!inviteEmail} className="form-button">
+            Invite Employee
+          </button>
+          {inviteStatus && <span className="invite-status">{inviteStatus}</span>}
+        </div>
       </div>
-      <div>
-        <h4>Pending Invitations</h4>
-        <ul>
-          {invitations.map(inv => (
-            <li key={inv.id}>{inv.email} - {inv.accepted ? 'Accepted' : 'Pending'}</li>
-          ))}
-        </ul>
+
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <div className="manager-section">
+          <h3>Pending Invitations</h3>
+          <ul className="invitations-list">
+            {invitations.map(inv => (
+              <li key={inv.id} className="invitation-item">
+                <span className="invitation-email">{inv.email}</span>
+                <span className="invitation-status">{inv.accepted ? 'Accepted' : 'Pending'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Add Employee Section */}
+      <div className="manager-section">
+        <h3>Add Employee</h3>
+        <form onSubmit={addEmployee} className="admin-search">
+          <input 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            placeholder="Employee email" 
+            required 
+            className="form-input"
+          />
+          <button type="submit" className="form-button">Add Employee</button>
+        </form>
       </div>
-      <form onSubmit={addEmployee} className="admin-search">
-        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Employee email" required />
-        <button type="submit">Add Employee</button>
-      </form>
+
       {error && <p className="error">{error}</p>}
-      {loading ? <p>Loading...</p> : null}
-      <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Permissions</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map(emp => {
-              const perm = perms.find(p => p.employee_id === emp.id) || defaultPerms
-              return (
-                <tr key={emp.id}>
-                  <td>{emp.username}</td>
-                  <td>{emp.email}</td>
-                  <td>
-                    {Object.keys(defaultPerms).map(field => (
-                      <label key={field} style={{marginRight:8}}>
-                        <input type="checkbox" checked={!!perm[field]} onChange={e => updatePerm(emp.id, field, e.target.checked)} />
-                        {field.replace('can_', '').replace('_', ' ')}
-                      </label>
-                    ))}
-                  </td>
-                  <td>
-                    <button onClick={() => removeEmployee(emp.id)}>Remove</button>
+      {loading ? <p className="loading-text">Loading...</p> : null}
+
+      {/* Employees Table */}
+      <div className="manager-section">
+        <h3>Manage Employees</h3>
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Permissions</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.length === 0 ? (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                    No employees added yet
                   </td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              ) : (
+                employees.map(emp => {
+                  const perm = perms.find(p => p.employee_id === emp.id) || defaultPerms
+                  return (
+                    <tr key={emp.id}>
+                      <td>{emp.username}</td>
+                      <td>{emp.email}</td>
+                      <td className="permissions-cell">
+                        {Object.keys(defaultPerms).map(field => (
+                          <label key={field} className="permission-label">
+                            <input 
+                              type="checkbox" 
+                              checked={!!perm[field]} 
+                              onChange={e => updatePerm(emp.id, field, e.target.checked)} 
+                            />
+                            <span>{field.replace('can_', '').replace('_', ' ')}</span>
+                          </label>
+                        ))}
+                      </td>
+                      <td>
+                        <button 
+                          onClick={() => removeEmployee(emp.id)} 
+                          className="action-button remove-button"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
