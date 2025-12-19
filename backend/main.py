@@ -1015,6 +1015,264 @@ def update_expenses():
             500,
         )
 
+@app.route('/finances/export', methods=['POST'])
+@jwt_required()
+def export_finances_data():
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Only allow defaults and managers to export
+        if user.role not in ['default', 'manager']:
+            return jsonify({"error": "You don't have permission to export data"}), 403
+        
+        # Get effective user_id (manager's ID for employees, but since we check role above, this will be the user's own ID)
+        effective_user_id = _get_effective_user_id(user_id)
+        
+        data = request.get_json() or {}
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+        
+        if not start_date_str or not end_date_str:
+            return jsonify({"error": "Start date and end date are required"}), 400
+        
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"}), 400
+        
+        if start_date >= end_date:
+            return jsonify({"error": "Start date must be before end date"}), 400
+        
+        # Get sold items within date range
+        sold_items = Sold_Items.query.filter(
+            Sold_Items.user_id == effective_user_id,
+            Sold_Items.sale_date >= start_date,
+            Sold_Items.sale_date <= end_date
+        ).order_by(Sold_Items.sale_date).all()
+        
+        # Get current inventory (snapshot at export time)
+        current_inventory = Current_Inventory.query.filter_by(user_id=effective_user_id).all()
+        
+        # Create CSV content
+        import csv
+        import io
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write sold items section
+        writer.writerow(['EXPORTED FINANCES DATA'])
+        writer.writerow(['Export Date:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+        writer.writerow(['Date Range:', f'{start_date.strftime("%Y-%m-%d")} to {end_date.strftime("%Y-%m-%d")}'])
+        writer.writerow(['User:', user.username])
+        writer.writerow([])
+        
+        writer.writerow(['SOLD ITEMS'])
+        writer.writerow(['Sale Date', 'Item Name', 'Category', 'Quantity Sold', 'Sale Price', 'Total Revenue'])
+        
+        total_revenue = 0
+        for item in sold_items:
+            total_item_revenue = item.sale_price * item.quantity_sold
+            total_revenue += total_item_revenue
+            writer.writerow([
+                item.sale_date.strftime('%Y-%m-%d %H:%M:%S'),
+                item.name,
+                item.category or '',
+                item.quantity_sold,
+                f'${item.sale_price:.2f}',
+                f'${total_item_revenue:.2f}'
+            ])
+        
+        writer.writerow([])
+        writer.writerow(['Total Revenue:', f'${total_revenue:.2f}'])
+        writer.writerow([])
+        
+        # Write current inventory section
+        writer.writerow(['CURRENT INVENTORY'])
+        writer.writerow(['Item ID', 'Name', 'Category', 'Quantity', 'Price', 'Total Value'])
+        
+        total_inventory_value = 0
+        for item in current_inventory:
+            total_item_value = item.price * item.quantity
+            total_inventory_value += total_item_value
+            writer.writerow([
+                item.item_id,
+                item.name,
+                item.category or '',
+                item.quantity,
+                f'${item.price:.2f}',
+                f'${total_item_value:.2f}'
+            ])
+        
+        writer.writerow([])
+        writer.writerow(['Total Inventory Value:', f'${total_inventory_value:.2f}'])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Generate filename
+        filename = f"finances_export_{user.username}_{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.csv"
+        
+        # Store export record in database
+        export_record = DataExport(
+            user_id=user_id,
+            filename=filename,
+            start_date=start_date,
+            end_date=end_date,
+            export_type='finances',
+            file_size=len(csv_content.encode('utf-8'))
+        )
+        db.session.add(export_record)
+        db.session.commit()
+        
+        # Return CSV file
+        response = app.response_class(
+            csv_content,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': len(csv_content.encode('utf-8'))
+            }
+        )
+        return response
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting finances data: {str(e)}")
+        return jsonify({"error": "Failed to export data", "details": str(e)}), 500
+
+@app.route('/finances/exports', methods=['GET'])
+@jwt_required()
+def get_export_history():
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Only allow defaults and managers to view exports
+        if user.role not in ['default', 'manager']:
+            return jsonify({"error": "You don't have permission to view exports"}), 403
+        
+        exports = DataExport.query.filter_by(user_id=user_id).order_by(DataExport.created_at.desc()).all()
+        
+        return jsonify({
+            "exports": [export.to_json() for export in exports]
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting export history: {str(e)}")
+        return jsonify({"error": "Failed to get export history", "details": str(e)}), 500
+
+@app.route('/finances/export/<int:export_id>/download', methods=['GET'])
+@jwt_required()
+def download_export(export_id):
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Only allow defaults and managers to download exports
+        if user.role not in ['default', 'manager']:
+            return jsonify({"error": "You don't have permission to download exports"}), 403
+        
+        export_record = DataExport.query.filter_by(id=export_id, user_id=user_id).first()
+        
+        if not export_record:
+            return jsonify({"error": "Export not found"}), 404
+        
+        # For now, we'll regenerate the CSV since we don't store the actual file
+        # In a production system, you'd store the file and serve it directly
+        
+        effective_user_id = _get_effective_user_id(user_id)
+        
+        # Get sold items within date range
+        sold_items = Sold_Items.query.filter(
+            Sold_Items.user_id == effective_user_id,
+            Sold_Items.sale_date >= export_record.start_date,
+            Sold_Items.sale_date <= export_record.end_date
+        ).order_by(Sold_Items.sale_date).all()
+        
+        # Get current inventory
+        current_inventory = Current_Inventory.query.filter_by(user_id=effective_user_id).all()
+        
+        # Create CSV content (same as export function)
+        import csv
+        import io
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        writer.writerow(['EXPORTED FINANCES DATA'])
+        writer.writerow(['Export Date:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+        writer.writerow(['Date Range:', f'{export_record.start_date.strftime("%Y-%m-%d")} to {export_record.end_date.strftime("%Y-%m-%d")}'])
+        writer.writerow(['User:', user.username])
+        writer.writerow([])
+        
+        writer.writerow(['SOLD ITEMS'])
+        writer.writerow(['Sale Date', 'Item Name', 'Category', 'Quantity Sold', 'Sale Price', 'Total Revenue'])
+        
+        total_revenue = 0
+        for item in sold_items:
+            total_item_revenue = item.sale_price * item.quantity_sold
+            total_revenue += total_item_revenue
+            writer.writerow([
+                item.sale_date.strftime('%Y-%m-%d %H:%M:%S'),
+                item.name,
+                item.category or '',
+                item.quantity_sold,
+                f'${item.sale_price:.2f}',
+                f'${total_item_revenue:.2f}'
+            ])
+        
+        writer.writerow([])
+        writer.writerow(['Total Revenue:', f'${total_revenue:.2f}'])
+        writer.writerow([])
+        
+        writer.writerow(['CURRENT INVENTORY'])
+        writer.writerow(['Item ID', 'Name', 'Category', 'Quantity', 'Price', 'Total Value'])
+        
+        total_inventory_value = 0
+        for item in current_inventory:
+            total_item_value = item.price * item.quantity
+            total_inventory_value += total_item_value
+            writer.writerow([
+                item.item_id,
+                item.name,
+                item.category or '',
+                item.quantity,
+                f'${item.price:.2f}',
+                f'${total_item_value:.2f}'
+            ])
+        
+        writer.writerow([])
+        writer.writerow(['Total Inventory Value:', f'${total_inventory_value:.2f}'])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Return CSV file
+        response = app.response_class(
+            csv_content,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename="{export_record.filename}"',
+                'Content-Length': len(csv_content.encode('utf-8'))
+            }
+        )
+        return response
+        
+    except Exception as e:
+        app.logger.error(f"Error downloading export: {str(e)}")
+        return jsonify({"error": "Failed to download export", "details": str(e)}), 500
+
 @app.route('/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard():

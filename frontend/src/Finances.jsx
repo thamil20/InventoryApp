@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 import './Finances.css'
 
 function Finances() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [financesData, setFinancesData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -11,9 +13,18 @@ function Finances() {
   const [expensesInput, setExpensesInput] = useState('')
   const [timePeriod, setTimePeriod] = useState('7')
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // Export functionality state
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportStartDate, setExportStartDate] = useState('')
+  const [exportEndDate, setExportEndDate] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [exportHistory, setExportHistory] = useState([])
+  const [loadingExports, setLoadingExports] = useState(false)
 
   useEffect(() => {
     fetchFinances()
+    fetchExportHistory()
   }, [timePeriod])
 
   const fetchFinances = async () => {
@@ -44,6 +55,120 @@ function Finances() {
     } catch (err) {
       setError(err.message)
       setLoading(false)
+    }
+  }
+
+  const fetchExportHistory = async () => {
+    // Only fetch if user has permission
+    if (!user || !['default', 'manager'].includes(user.role)) {
+      return
+    }
+    
+    try {
+      setLoadingExports(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances/exports`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setExportHistory(data.exports || [])
+      }
+    } catch (err) {
+      console.error('Error fetching export history:', err)
+    } finally {
+      setLoadingExports(false)
+    }
+  }
+
+  const handleExport = async () => {
+    if (!exportStartDate || !exportEndDate) {
+      alert('Please select both start and end dates.')
+      return
+    }
+
+    const start = new Date(exportStartDate)
+    const end = new Date(exportEndDate)
+    
+    if (start >= end) {
+      alert('Start date must be before end date.')
+      return
+    }
+
+    try {
+      setExporting(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances/export`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          start_date: exportStartDate,
+          end_date: exportEndDate
+        })
+      })
+
+      if (response.ok) {
+        // Trigger download
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'finances_export.csv'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        
+        // Close modal and refresh history
+        setShowExportModal(false)
+        setExportStartDate('')
+        setExportEndDate('')
+        fetchExportHistory()
+        
+        alert('Export completed successfully!')
+      } else {
+        const errorData = await response.json()
+        alert('Export failed: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (err) {
+      alert('Export failed: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const downloadExport = async (exportId, filename) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/finances/export/${exportId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Failed to download export')
+      }
+    } catch (err) {
+      alert('Download failed: ' + err.message)
     }
   }
 
@@ -308,9 +433,127 @@ function Finances() {
         </div>
       </div>
 
+      {/* Export Button - Only for defaults and managers */}
+      {user && ['default', 'manager'].includes(user.role) && (
+        <div className="export-section">
+          <button 
+            onClick={() => setShowExportModal(true)} 
+            className="export-btn"
+            disabled={exporting}
+          >
+            {exporting ? 'Exporting...' : 'Export Data'}
+          </button>
+        </div>
+      )}
+
       <div className="chart-section">
         {renderChart()}
       </div>
+
+      {/* Export History Table - Only for defaults and managers */}
+      {user && ['default', 'manager'].includes(user.role) && (
+        <div className="export-history-section">
+          <h2>Export History</h2>
+          {loadingExports ? (
+            <p>Loading export history...</p>
+          ) : exportHistory.length > 0 ? (
+            <div className="export-table-container">
+              <table className="export-table">
+                <thead>
+                  <tr>
+                    <th>Date Range</th>
+                    <th>Export Type</th>
+                    <th>File Size</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exportHistory.map((exportItem) => (
+                    <tr key={exportItem.id}>
+                      <td>
+                        {new Date(exportItem.start_date).toLocaleDateString()} - {new Date(exportItem.end_date).toLocaleDateString()}
+                      </td>
+                      <td>{exportItem.export_type}</td>
+                      <td>{exportItem.file_size ? `${Math.round(exportItem.file_size / 1024)} KB` : 'N/A'}</td>
+                      <td>{new Date(exportItem.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <button 
+                          onClick={() => downloadExport(exportItem.id, exportItem.filename)}
+                          className="download-btn"
+                        >
+                          Download
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>No exports found. Create your first export above.</p>
+          )}
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Export Financial Data</h3>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowExportModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="start-date">Start Date:</label>
+                <input
+                  type="date"
+                  id="start-date"
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="end-date">End Date:</label>
+                <input
+                  type="date"
+                  id="end-date"
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="export-info">
+                <p>This will export all financial data including sold items and current inventory within the selected date range.</p>
+                <p>The file will be downloaded to your default downloads folder.</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                onClick={() => setShowExportModal(false)} 
+                className="cancel-btn"
+                disabled={exporting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleExport} 
+                className="export-modal-btn"
+                disabled={exporting || !exportStartDate || !exportEndDate}
+              >
+                {exporting ? 'Exporting...' : 'Export CSV'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

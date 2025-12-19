@@ -131,3 +131,30 @@ class Sold_Items(db.Model):
             "salePrice": self.sale_price,
             "saleDate": self.sale_date.isoformat() if self.sale_date else None,
         }
+
+# Model for storing export records
+class DataExport(db.Model):
+    __tablename__ = 'data_exports'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False)
+    export_type = db.Column(db.String(50), nullable=False)  # 'finances', 'inventory', etc.
+    file_size = db.Column(db.Integer, nullable=True)  # in bytes
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    
+    # Relationship to user
+    user = db.relationship('User', backref=db.backref('exports', lazy=True))
+    
+    def to_json(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "filename": self.filename,
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+            "export_type": self.export_type,
+            "file_size": self.file_size,
+            "created_at": self.created_at.isoformat(),
+        }
