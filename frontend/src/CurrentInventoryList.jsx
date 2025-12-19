@@ -54,7 +54,7 @@ const CurrentInventoryList = () => {
         if (handlePermissionError(response, 'view inventory')) return
         const data = await response.json()
         setCurrentInventory(data.current_inventory)
-        console.log(data.current_inventory)
+        // Data fetched successfully
     }
 
     const deleteItem = async (itemId) => {

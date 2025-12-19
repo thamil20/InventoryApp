@@ -1,26 +1,24 @@
-
 # ...existing imports...
-from flask import url_for
-from flask import redirect
+from flask import url_for, redirect, request, jsonify
 import uuid
-from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from config import app, db, limiter
 from models import Current_Inventory, Sold_Items, User, EmployeePermission, ManagerInvitation, DataExport
-from models import db
 from flask_migrate import Migrate
 
 migrate = Migrate(app, db)
-
 
 from schemas import (
     validate_request, UserRegistrationSchema, UserLoginSchema,
     InventoryItemSchema, ItemUpdateSchema, SoldItemSchema,
     ExpensesUpdateSchema, ForgotPasswordSchema
 )
-from datetime import datetime
-from sqlalchemy import func
+from datetime import datetime, timedelta
+from sqlalchemy import func, and_
 import os
+import secrets
+import smtplib
+from email.mime.text import MIMEText
 
 # Endpoint for manager to list their invitations
 @app.route('/manager/invitations', methods=['GET'])
@@ -195,14 +193,16 @@ def register():
     email = data['email']
     phone = data.get('phone')
     
-    # Check if user already exists
-    if User.query.filter_by(username=username).first():
-        return (
-            jsonify({"error": "Username already exists"}), 
-            400,
-        )
+    # Check if user already exists (single query for both username and email)
+    existing_user = User.query.filter(
+        (User.username == username) | (User.email == email)
+    ).first()
     
-    if User.query.filter_by(email=email).first():
+    if existing_user:
+        if existing_user.username == username:
+            return jsonify({"error": "Username already exists"}), 400
+        else:
+            return jsonify({"error": "Email already exists"}), 400
         return (
             jsonify({"error": "Email already exists"}), 
             400,
@@ -293,10 +293,6 @@ class PasswordResetToken(db.Model):
 
 def send_email(to_email, subject, body):
     # Use environment variables for config (MAIL_*)
-    import os
-    import smtplib
-    from email.mime.text import MIMEText
-    
     try:
         MAIL_SERVER = os.environ.get('MAIL_SERVER')
         MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))

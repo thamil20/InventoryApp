@@ -38,7 +38,7 @@ const SoldItemsList = () => {
             if (handlePermissionError(response, 'view sold items')) return
             const data = await response.json()
             setSoldItems(data.sold_items)
-            console.log(data.sold_items)
+            // Data fetched successfully
         } catch (error) {
             console.error("Error fetching sold items:", error)
         }
