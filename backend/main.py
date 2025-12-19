@@ -476,9 +476,9 @@ def _check_employee_permission(user_id: int, permission_name: str) -> bool:
     if user.role in ['manager', 'admin']:
         return True
 
-    # Default users have basic permissions (view inventory, add items, see finances)
+    # Default users have basic permissions (view inventory, add items, edit items, remove items, see finances)
     if user.role == 'default':
-        basic_permissions = ['can_view_inventory', 'can_add_items', 'can_see_finances']
+        basic_permissions = ['can_view_inventory', 'can_add_items', 'can_edit_inventory', 'can_remove_items', 'can_see_finances']
         return permission_name in basic_permissions
 
     # Employees need to check their permissions
