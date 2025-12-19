@@ -1025,8 +1025,8 @@ def export_finances_data():
         if not user:
             return jsonify({"error": "User not found"}), 404
         
-        # Only allow defaults and managers to export
-        if user.role not in ['default', 'manager']:
+        # Only allow defaults, managers, and admins to export
+        if user.role not in ['default', 'manager', 'admin']:
             return jsonify({"error": "You don't have permission to export data"}), 403
         
         # Get effective user_id (manager's ID for employees, but since we check role above, this will be the user's own ID)
@@ -1155,8 +1155,8 @@ def get_export_history():
         if not user:
             return jsonify({"error": "User not found"}), 404
         
-        # Only allow defaults and managers to view exports
-        if user.role not in ['default', 'manager']:
+        # Only allow defaults, managers, and admins to view exports
+        if user.role not in ['default', 'manager', 'admin']:
             return jsonify({"error": "You don't have permission to view exports"}), 403
         
         exports = DataExport.query.filter_by(user_id=user_id).order_by(DataExport.created_at.desc()).all()
@@ -1179,8 +1179,8 @@ def download_export(export_id):
         if not user:
             return jsonify({"error": "User not found"}), 404
         
-        # Only allow defaults and managers to download exports
-        if user.role not in ['default', 'manager']:
+        # Only allow defaults, managers, and admins to download exports
+        if user.role not in ['default', 'manager', 'admin']:
             return jsonify({"error": "You don't have permission to download exports"}), 403
         
         export_record = DataExport.query.filter_by(id=export_id, user_id=user_id).first()
