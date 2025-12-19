@@ -562,40 +562,72 @@ def admin_user_detail(target_id):
             return (jsonify({"message": "User updated", "user": user.to_json()}), 200)
 
         if request.method == 'DELETE':
-            # Handle special case for manager deletion: update employee roles
-            if user.role == 'manager':
-                # Find all employees of this manager and change their role to 'default'
-                employees = EmployeePermission.query.filter_by(manager_id=target_id).all()
-                for perm in employees:
-                    employee = User.query.get(perm.employee_id)
-                    if employee and employee.role == 'employee':
-                        employee.role = 'default'
-                        db.session.add(employee)
+            # Prevent admin from deleting themselves
+            if target_id == requester_id:
+                return (jsonify({"error": "You cannot delete your own account"}), 400)
             
-            # Delete all related records first to avoid foreign key constraint errors
-            
-            # Delete employee permissions where user is manager or employee
-            EmployeePermission.query.filter(
-                (EmployeePermission.manager_id == target_id) | 
-                (EmployeePermission.employee_id == target_id)
-            ).delete()
-            
-            # Delete manager invitations sent by this user
-            ManagerInvitation.query.filter_by(manager_id=target_id).delete()
-            
-            # Delete all inventory items for this user
-            Current_Inventory.query.filter_by(user_id=target_id).delete()
-            
-            # Delete all sold items for this user
-            Sold_Items.query.filter_by(user_id=target_id).delete()
-            
-            # Delete all export records for this user
-            DataExport.query.filter_by(user_id=target_id).delete()
-            
-            # Finally delete the user
-            db.session.delete(user)
-            db.session.commit()
-            return (jsonify({"message": "User and all associated data deleted"}), 200)
+            try:
+                # Handle orphaned employees: if user is employee but has no manager, convert to default
+                if user.role == 'employee':
+                    perm = EmployeePermission.query.filter_by(employee_id=target_id).first()
+                    if not perm:
+                        app.logger.info(f"Converting orphaned employee {user.username} to default user")
+                        user.role = 'default'
+                        db.session.add(user)
+                
+                # Handle special case for manager deletion: update employee roles
+                if user.role == 'manager':
+                    app.logger.info(f"Deleting manager {user.username}, updating employee roles")
+                    # Find all employees of this manager and change their role to 'default'
+                    employees = EmployeePermission.query.filter_by(manager_id=target_id).all()
+                    for perm in employees:
+                        employee = User.query.get(perm.employee_id)
+                        if employee and employee.role == 'employee':
+                            app.logger.info(f"Converting employee {employee.username} to default user")
+                            employee.role = 'default'
+                            db.session.add(employee)
+                
+                app.logger.info(f"Starting deletion of user {user.username} (ID: {target_id})")
+                
+                # Delete all related records first to avoid foreign key constraint errors
+                
+                # Delete employee permissions where user is manager or employee
+                perm_count = EmployeePermission.query.filter(
+                    (EmployeePermission.manager_id == target_id) | 
+                    (EmployeePermission.employee_id == target_id)
+                ).delete()
+                app.logger.info(f"Deleted {perm_count} employee permission records")
+                
+                # Delete manager invitations sent by this user
+                invite_count = ManagerInvitation.query.filter_by(manager_id=target_id).delete()
+                app.logger.info(f"Deleted {invite_count} manager invitation records")
+                
+                # Delete all inventory items for this user
+                inventory_count = Current_Inventory.query.filter_by(user_id=target_id).delete()
+                app.logger.info(f"Deleted {inventory_count} inventory records")
+                
+                # Delete all sold items for this user
+                sold_count = Sold_Items.query.filter_by(user_id=target_id).delete()
+                app.logger.info(f"Deleted {sold_count} sold item records")
+                
+                # Delete all export records for this user
+                export_count = DataExport.query.filter_by(user_id=target_id).delete()
+                app.logger.info(f"Deleted {export_count} export records")
+                
+                # Finally delete the user
+                app.logger.info(f"Deleting user record for {user.username}")
+                db.session.delete(user)
+                db.session.commit()
+                app.logger.info(f"Successfully deleted user {user.username} and all associated data")
+                return (jsonify({"message": "User and all associated data deleted"}), 200)
+                
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Error deleting user {user.username} (ID: {target_id}): {str(e)}")
+                app.logger.error(f"Exception type: {type(e).__name__}")
+                import traceback
+                app.logger.error(f"Traceback: {traceback.format_exc()}")
+                return (jsonify({"error": "Failed to delete user", "details": str(e)}), 500)
 
     except Exception as e:
         app.logger.error(f"Error in admin user detail: {str(e)}")
