@@ -72,15 +72,16 @@ def invite_employee():
     db.session.add(invitation)
     db.session.commit()
     
-    # Send email with accept link - use FRONTEND_URL for all URLs
+    # Send email with accept link - use FRONTEND_URL for base, but /api/ prefix for backend routes
     base_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
     
     # Ensure URL has protocol
     if not base_url.startswith('http'):
         base_url = 'https://' + base_url
     
-    accept_url = f"{base_url}/accept-invitation/{token}"
-    decline_url = f"{base_url}/decline-invitation/{token}"
+    # Use /api/ prefix so nginx routes to backend
+    accept_url = f"{base_url}/api/accept-invitation/{token}"
+    decline_url = f"{base_url}/api/decline-invitation/{token}"
     
     body = (
         f"Hello,\n\nYou have been invited by {manager.username} ({manager.email}) to join their team as an employee.\n"
