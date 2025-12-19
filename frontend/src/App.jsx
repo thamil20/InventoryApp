@@ -10,14 +10,6 @@ import AddItemForm from './AddItemForm.jsx'
 import Finances from './Finances.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
 import ManagerDashboard from './ManagerDashboard.jsx'
-          <Route
-            path="/manager"
-            element={
-              <ProtectedRoute>
-                <ManagerDashboard />
-              </ProtectedRoute>
-            }
-          />
 import Login from './Login.jsx'
 import Register from './Register.jsx'
 import ForgotPassword from './ForgotPassword.jsx'
@@ -93,6 +85,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager"
+            element={
+              <ProtectedRoute>
+                <ManagerDashboard />
               </ProtectedRoute>
             }
           />
