@@ -562,6 +562,16 @@ def admin_user_detail(target_id):
             return (jsonify({"message": "User updated", "user": user.to_json()}), 200)
 
         if request.method == 'DELETE':
+            # Handle special case for manager deletion: update employee roles
+            if user.role == 'manager':
+                # Find all employees of this manager and change their role to 'default'
+                employees = EmployeePermission.query.filter_by(manager_id=target_id).all()
+                for perm in employees:
+                    employee = User.query.get(perm.employee_id)
+                    if employee and employee.role == 'employee':
+                        employee.role = 'default'
+                        db.session.add(employee)
+            
             # Delete all related records first to avoid foreign key constraint errors
             
             # Delete employee permissions where user is manager or employee
