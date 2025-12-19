@@ -27,7 +27,7 @@
   margin-bottom: 1.5rem;
 }
 
-.form-group label {
+.form-container .form-group label {
   display: block;
   font-weight: 600;
   color: var(--text-primary);
@@ -53,8 +53,8 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent-color, #667eea);
+  box-shadow: 0 0 0 3px var(--accent-shadow, rgba(102, 126, 234, 0.1));
 }
 
 .form-group textarea {
