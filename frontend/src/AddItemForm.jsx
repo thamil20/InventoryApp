@@ -1,9 +1,11 @@
 import {useState} from 'react'
 import { useAuth } from './AuthContext'
+import { useNavigate } from 'react-router-dom'
 import './AddItemForm.css'
 
 const AddItemForm = ({ }) => {
     const { token } = useAuth()
+    const navigate = useNavigate()
     const [name, setName] = useState('')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
@@ -35,6 +37,11 @@ const AddItemForm = ({ }) => {
         setIsSubmitting(true)
         try {
             const response = await fetch(url, options)
+            if (response.status === 403) {
+                alert("You don't have permission to add items. Redirecting to dashboard.")
+                navigate('/')
+                return
+            }
             if (response.status !== 201 && response.status !== 200) {
                 const errorData = await response.json()
                 alert('Error: ' + (errorData.error || errorData.details || 'Unknown error'))

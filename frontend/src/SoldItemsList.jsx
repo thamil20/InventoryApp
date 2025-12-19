@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from "react"
 import { useAuth } from './AuthContext'
+import { useNavigate } from 'react-router-dom'
 import "./SoldItemsList.css"
 
 const SoldItemsList = () => {
     const { token } = useAuth()
+    const navigate = useNavigate()
     const [soldItems, setSoldItems] = useState([])
     const [selectedItem, setSelectedItem] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [filterColumn, setFilterColumn] = useState('all')
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
+
+    // Handle permission denied errors
+    const handlePermissionError = (response, action = 'access this page') => {
+        if (response.status === 403) {
+            alert(`You don't have permission to ${action}. Redirecting to dashboard.`)
+            navigate('/')
+            return true
+        }
+        return false
+    }
 
     useEffect(() => {
         fetchSoldItems()
@@ -23,6 +35,7 @@ const SoldItemsList = () => {
                     'Authorization': `Bearer ${token}`
                 }
             })
+            if (handlePermissionError(response, 'view sold items')) return
             const data = await response.json()
             setSoldItems(data.sold_items)
             console.log(data.sold_items)

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Finances.css'
 
 function Finances() {
+  const navigate = useNavigate()
   const [financesData, setFinancesData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -24,6 +26,12 @@ function Finances() {
           'Content-Type': 'application/json'
         }
       })
+
+      if (response.status === 403) {
+        alert("You don't have permission to view finances. Redirecting to dashboard.")
+        navigate('/')
+        return
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch finances data')
@@ -50,6 +58,12 @@ function Finances() {
         },
         body: JSON.stringify({ expenses: parseFloat(expensesInput) || 0 })
       })
+
+      if (response.status === 403) {
+        alert("You don't have permission to update expenses. Redirecting to dashboard.")
+        navigate('/')
+        return
+      }
 
       if (!response.ok) {
         throw new Error('Failed to update expenses')

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react"
 import { useAuth } from './AuthContext'
+import { useNavigate } from 'react-router-dom'
 import "./CurrentInventoryList.css"
 
 const CurrentInventoryList = () => {
-    const { token } = useAuth()
+    const { token, user } = useAuth()
+    const navigate = useNavigate()
     const [currentInventory, setCurrentInventory] = useState([])
     const [selectedItem, setSelectedItem] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -28,6 +30,16 @@ const CurrentInventoryList = () => {
     const [filterColumn, setFilterColumn] = useState('all')
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
 
+    // Handle permission denied errors
+    const handlePermissionError = (response, action = 'access this page') => {
+        if (response.status === 403) {
+            alert(`You don't have permission to ${action}. Redirecting to dashboard.`)
+            navigate('/')
+            return true
+        }
+        return false
+    }
+
     useEffect(() => {
         fetchCurrentInventory()
     }, [])
@@ -39,6 +51,7 @@ const CurrentInventoryList = () => {
                 'Authorization': `Bearer ${token}`
             }
         })
+        if (handlePermissionError(response, 'view inventory')) return
         const data = await response.json()
         setCurrentInventory(data.current_inventory)
         console.log(data.current_inventory)
@@ -53,6 +66,7 @@ const CurrentInventoryList = () => {
                     'Authorization': `Bearer ${token}`
                 }
             })
+            if (handlePermissionError(response, 'delete items')) return
             if (response.ok) {
                 await fetch(`${import.meta.env.VITE_API_URL}/inventory/renumber`, { 
                     method: 'POST',
@@ -166,6 +180,7 @@ const CurrentInventoryList = () => {
 
         try {
             const response = await fetch(url, options)
+            if (handlePermissionError(response, 'edit items')) return
             if (response.ok) {
                 await fetchCurrentInventory()
                 closeEditModal()
@@ -210,6 +225,7 @@ const CurrentInventoryList = () => {
 
         try {
             const response = await fetch(url, options)
+            if (handlePermissionError(response, 'sell items')) return
             if (response.ok) {
                 await fetchCurrentInventory()
                 closeSellModal()

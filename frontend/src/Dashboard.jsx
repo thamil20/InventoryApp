@@ -1,14 +1,38 @@
 import { useAuth } from './AuthContext'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import './Dashboard.css'
 
 function Dashboard() {
-  const { user, setUser } = useAuth()
+  const { user, setUser, refreshUser } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [requesting, setRequesting] = useState(false)
   const [requestSent, setRequestSent] = useState(false)
+  const [inviteMessage, setInviteMessage] = useState(null)
+
+  useEffect(() => {
+    // Check for invitation result
+    const inviteStatus = searchParams.get('invite')
+    if (inviteStatus === 'accepted') {
+      setInviteMessage({ type: 'success', text: 'You have successfully joined the team! You are now an employee.' })
+      // Refresh user data to get updated role and permissions
+      refreshUser()
+      // Remove the query parameter
+      searchParams.delete('invite')
+      setSearchParams(searchParams, { replace: true })
+    } else if (inviteStatus === 'declined') {
+      setInviteMessage({ type: 'info', text: 'You have declined the invitation.' })
+      searchParams.delete('invite')
+      setSearchParams(searchParams, { replace: true })
+    } else if (inviteStatus === 'error') {
+      setInviteMessage({ type: 'error', text: 'There was an error processing the invitation. It may have expired or already been used.' })
+      searchParams.delete('invite')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams])
 
   useEffect(() => {
     fetchDashboardData()
@@ -83,6 +107,17 @@ function Dashboard() {
   
   return (
     <div className="dashboard-container">
+      {inviteMessage && (
+        <div className={`invite-message invite-${inviteMessage.type}`}>
+          {inviteMessage.text}
+          <button className="invite-message-close" onClick={() => setInviteMessage(null)}>×</button>
+        </div>
+      )}
+      {user?.role === 'employee' && user?.manager_name && (
+        <div className="employee-banner">
+          You are viewing {user.manager_name}'s inventory as an employee.
+        </div>
+      )}
       {user?.role === 'default' && (
         <div className="become-manager-btn-container">
           {requestSent ? (

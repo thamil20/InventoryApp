@@ -407,8 +407,20 @@ def get_current_user():
             404,
         )
     
+    user_data = user.to_json()
+    
+    # If user is an employee, include their permissions and manager info
+    if user.role == 'employee':
+        perm = EmployeePermission.query.filter_by(employee_id=user.id).first()
+        if perm:
+            manager = User.query.get(perm.manager_id)
+            user_data['permissions'] = perm.to_json()
+            user_data['manager_id'] = perm.manager_id
+            if manager:
+                user_data['manager_name'] = manager.username
+    
     return (
-        jsonify({"user": user.to_json()}),
+        jsonify({"user": user_data}),
         200,
     )
 
@@ -441,6 +453,22 @@ def _check_employee_permission(user_id: int, permission_name: str) -> bool:
     
     # Default users have no permissions
     return False
+
+def _get_effective_user_id(user_id: int) -> int:
+    """
+    Get the effective user ID for data access.
+    Employees see their manager's data, others see their own.
+    """
+    user = User.query.get(user_id)
+    if not user:
+        return user_id
+    
+    if user.role == 'employee':
+        perm = EmployeePermission.query.filter_by(employee_id=user_id).first()
+        if perm:
+            return perm.manager_id
+    
+    return user_id
 
 
 @app.route('/admin/users', methods=['GET'])
@@ -574,8 +602,11 @@ def get_current_inventory():
         if not _check_employee_permission(user_id, 'can_view_inventory'):
             return jsonify({"error": "You don't have permission to view inventory"}), 403
         
-        current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
-        app.logger.debug(f"Found {len(current_inventory)} items for user {user_id}")
+        # Get effective user_id (manager's ID for employees)
+        effective_user_id = _get_effective_user_id(user_id)
+        
+        current_inventory = Current_Inventory.query.filter_by(user_id=effective_user_id).all()
+        app.logger.debug(f"Found {len(current_inventory)} items for user {effective_user_id}")
         json_inventory = list(map(lambda item: item.to_json(), current_inventory))
         return (
                 jsonify({"current_inventory":json_inventory}), 
@@ -597,7 +628,10 @@ def get_sold_items():
     if not _check_employee_permission(user_id, 'can_see_finances'):
         return jsonify({"error": "You don't have permission to view sold items"}), 403
     
-    sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
+    # Get effective user_id (manager's ID for employees)
+    effective_user_id = _get_effective_user_id(user_id)
+    
+    sold_items = Sold_Items.query.filter_by(user_id=effective_user_id).all()
     json_sold_items = list(map(lambda item: item.to_json(), sold_items))
     return (
             jsonify({"sold_items":json_sold_items}), 
@@ -617,23 +651,26 @@ def create_item():
     if not _check_employee_permission(user_id, 'can_add_items'):
         return jsonify({"error": "You don't have permission to add items"}), 403
     
-    # Verify user exists
-    user = User.query.get(user_id)
+    # Get effective user_id (manager's ID for employees)
+    effective_user_id = _get_effective_user_id(user_id)
+    
+    # Verify effective user exists
+    user = User.query.get(effective_user_id)
     if not user:
-        app.logger.warning(f"User with ID {user_id} not found in database")
+        app.logger.warning(f"User with ID {effective_user_id} not found in database")
         return (
             jsonify({"error": "User not found"}), 
             404,
         )
     next_item_id = (
         db.session.query(func.max(Current_Inventory.item_id))
-        .filter(Current_Inventory.user_id == user_id)
+        .filter(Current_Inventory.user_id == effective_user_id)
         .scalar()
     )
     next_item_id = (next_item_id or 0) + 1
     
     new_item = Current_Inventory(
-        user_id=user_id,
+        user_id=effective_user_id,
         item_id=next_item_id,
         name=data['name'],
         quantity=data['quantity'],
@@ -663,7 +700,15 @@ def create_item():
 @jwt_required()
 def sell_item(item_id):
     user_id = int(get_jwt_identity())
-    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
+    
+    # Check if employee has permission to edit inventory
+    if not _check_employee_permission(user_id, 'can_edit_inventory'):
+        return jsonify({"error": "You don't have permission to sell items"}), 403
+    
+    # Get effective user_id (manager's ID for employees)
+    effective_user_id = _get_effective_user_id(user_id)
+    
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=effective_user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -687,7 +732,7 @@ def sell_item(item_id):
         )
     
     sold_item = Sold_Items(
-        user_id=user_id,
+        user_id=effective_user_id,
         original_item_id=item.item_id,
         name=item.name,
         quantity=item.quantity,
@@ -729,7 +774,10 @@ def update_item(item_id):
     if not _check_employee_permission(user_id, 'can_edit_inventory'):
         return jsonify({"error": "You don't have permission to edit items"}), 403
     
-    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
+    # Get effective user_id (manager's ID for employees)
+    effective_user_id = _get_effective_user_id(user_id)
+    
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=effective_user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -769,7 +817,10 @@ def delete_item(item_id):
     if not _check_employee_permission(user_id, 'can_remove_items'):
         return jsonify({"error": "You don't have permission to delete items"}), 403
     
-    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=user_id).first()
+    # Get effective user_id (manager's ID for employees)
+    effective_user_id = _get_effective_user_id(user_id)
+    
+    item = Current_Inventory.query.filter_by(item_id=item_id, user_id=effective_user_id).first()
     if not item:
         return (
             jsonify({"error": "Item not found"}), 
@@ -813,11 +864,14 @@ def get_finances():
         if not _check_employee_permission(user_id, 'can_see_finances'):
             return jsonify({"error": "You don't have permission to view finances"}), 403
         
+        # Get effective user_id (manager's ID for employees)
+        effective_user_id = _get_effective_user_id(user_id)
+        
         # Get days parameter from query string (default to 7)
         days_param = request.args.get('days', '7')
         
         # Get user to retrieve expenses
-        user = User.query.get(user_id)
+        user = User.query.get(effective_user_id)
         if not user:
             return (
                 jsonify({"error": "User not found"}),
@@ -825,13 +879,13 @@ def get_finances():
             )
         
         # Get all sold items for the user
-        sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
+        sold_items = Sold_Items.query.filter_by(user_id=effective_user_id).all()
         
         # Calculate total revenue from sold items
         total_revenue = sum(item.sale_price * item.quantity_sold for item in sold_items)
         
         # Get current inventory
-        current_inventory = Current_Inventory.query.filter_by(user_id=user_id).all()
+        current_inventory = Current_Inventory.query.filter_by(user_id=effective_user_id).all()
         
         # Calculate potential revenue from current inventory
         potential_revenue = sum(item.price * item.quantity for item in current_inventory)
@@ -857,7 +911,7 @@ def get_finances():
                 func.sum(Sold_Items.sale_price * Sold_Items.quantity_sold),
                 func.sum(Sold_Items.quantity_sold)
             ).filter(
-                Sold_Items.user_id == user_id,
+                Sold_Items.user_id == effective_user_id,
                 Sold_Items.sale_date >= day,
                 Sold_Items.sale_date < next_day
             ).first()
@@ -931,8 +985,11 @@ def get_dashboard():
     try:
         user_id = int(get_jwt_identity())
         
+        # Get effective user_id (manager's ID for employees)
+        effective_user_id = _get_effective_user_id(user_id)
+        
         # Get user for expenses
-        user = User.query.get(user_id)
+        user = User.query.get(effective_user_id)
         if not user:
             return (
                 jsonify({"error": "User not found"}),
@@ -940,19 +997,19 @@ def get_dashboard():
             )
         
         # Get 5 most recently added inventory items
-        recent_inventory = Current_Inventory.query.filter_by(user_id=user_id)\
+        recent_inventory = Current_Inventory.query.filter_by(user_id=effective_user_id)\
             .order_by(Current_Inventory.added_date.desc())\
             .limit(5)\
             .all()
         
         # Get 5 most recently sold items
-        recent_sold = Sold_Items.query.filter_by(user_id=user_id)\
+        recent_sold = Sold_Items.query.filter_by(user_id=effective_user_id)\
             .order_by(Sold_Items.sale_date.desc())\
             .limit(5)\
             .all()
         
         # Calculate total revenue
-        all_sold_items = Sold_Items.query.filter_by(user_id=user_id).all()
+        all_sold_items = Sold_Items.query.filter_by(user_id=effective_user_id).all()
         total_revenue = sum(item.sale_price * item.quantity_sold for item in all_sold_items)
         
         # Calculate profit

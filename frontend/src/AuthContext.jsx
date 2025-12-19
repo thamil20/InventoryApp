@@ -57,12 +57,21 @@ export const AuthProvider = ({ children }) => {
         setUser(null)
     }
 
+    const refreshUser = async () => {
+        const storedToken = localStorage.getItem('token')
+        if (storedToken) {
+            await fetchCurrentUser(storedToken)
+        }
+    }
+
     const value = {
         user,
+        setUser,
         token,
         loading,
         login,
         logout,
+        refreshUser,
         isAuthenticated: !!token
     }
 
