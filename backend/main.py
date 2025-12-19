@@ -65,7 +65,8 @@ def invite_employee():
         f"Decline: {decline_url}\n\n"
         "If you don't have an account yet, please register first, then click the link again."
     )
-    send_email(email, 'Invitation to join as employee', body)
+    if not send_email(email, 'Invitation to join as employee', body):
+        return jsonify({'error': 'Failed to send invitation email'}), 500
     return jsonify({'message': 'Invitation sent'})
 
 # Endpoint for employee to accept invitation (no auth required)
@@ -265,22 +266,27 @@ def send_email(to_email, subject, body):
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1','true','yes')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
+    
+    app.logger.info(f"Email config - Server: {MAIL_SERVER}, Port: {MAIL_PORT}, Username: {MAIL_USERNAME}, TLS: {MAIL_USE_TLS}")
+    
     if not (MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD):
-        app.logger.error('SMTP config missing')
+        app.logger.error(f'SMTP config missing - Server: {MAIL_SERVER}, Username: {MAIL_USERNAME}, Password: {"***" if MAIL_PASSWORD else "MISSING"}')
         return False
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = MAIL_DEFAULT_SENDER
     msg['To'] = to_email
     try:
+        app.logger.info(f"Attempting to send email to {to_email} via {MAIL_SERVER}:{MAIL_PORT}")
         with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
             if MAIL_USE_TLS:
                 server.starttls()
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
             server.sendmail(MAIL_DEFAULT_SENDER, [to_email], msg.as_string())
+        app.logger.info(f"Email sent successfully to {to_email}")
         return True
     except Exception as e:
-        app.logger.error(f"Failed to send email: {e}")
+        app.logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}")
         return False
 
 @app.route('/auth/forgot-password', methods=['POST'])
