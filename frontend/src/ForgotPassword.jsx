@@ -10,25 +10,26 @@ const ForgotPassword = () => {
         e.preventDefault()
         setIsSubmitting(true)
 
-        // TODO: Add your forgot password API call here
-        // const data = { email }
-        // const url = `${import.meta.env.VITE_API_URL}/auth/forgot-password`
-        // const options = {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(data),
-        // }
+        const data = { email }
+        const url = `${import.meta.env.VITE_API_URL}/auth/forgot-password`
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }
         
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await fetch(url, options)
+            const result = await response.json()
             
-            setSuccessMessage('Password reset link has been sent to your email.')
-            setEmail('')
-            
-            console.log('Forgot password request for:', email)
+            if (response.ok) {
+                setSuccessMessage('Password reset link has been sent to your email.')
+                setEmail('')
+            } else {
+                alert('Error: ' + (result.error || 'Failed to send reset link'))
+            }
         } catch (err) {
-            alert('Error sending reset link: ' + err)
+            alert('Error sending reset link: ' + err.message)
         } finally {
             setIsSubmitting(false)
         }

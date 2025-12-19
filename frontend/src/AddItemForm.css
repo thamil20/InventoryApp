@@ -30,21 +30,24 @@
 .form-group label {
   display: block;
   font-weight: 600;
-  color: #282c34;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
+  transition: color 0.3s ease;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   font-size: 1rem;
   font-family: inherit;
   transition: all 0.3s ease;
   box-sizing: border-box;
+  background: var(--bg-input, #fff);
+  color: var(--text-primary);
 }
 
 .form-group input:focus,

@@ -316,29 +316,46 @@ def send_email(to_email, subject, body):
         msg['From'] = MAIL_DEFAULT_SENDER
         msg['To'] = to_email
         
-        app.logger.info(f"Attempting to send email to {to_email} via {MAIL_SERVER}:{MAIL_PORT}")
+        app.logger.info(f"Attempting to send email to {to_email} via {MAIL_SERVER}")
         
-        # Create SMTP connection with timeout
-        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=10)
+        # Try port 587 first, fallback to 2525 if it fails
+        ports_to_try = [MAIL_PORT]
+        if MAIL_PORT == 587:
+            ports_to_try.append(2525)
         
-        try:
-            if MAIL_USE_TLS:
-                app.logger.info("Starting TLS...")
-                server.starttls()
-            
-            app.logger.info(f"Logging in with {MAIL_USERNAME}...")
-            server.login(MAIL_USERNAME, MAIL_PASSWORD)
-            
-            app.logger.info(f"Sending email...")
-            server.sendmail(MAIL_DEFAULT_SENDER, [to_email], msg.as_string())
-            
-            app.logger.info(f"Email sent successfully to {to_email}")
-            return True
-        finally:
+        last_error = None
+        for port in ports_to_try:
             try:
-                server.quit()
-            except:
-                pass
+                app.logger.info(f"Trying SMTP port {port}...")
+                # Create SMTP connection with timeout
+                server = smtplib.SMTP(MAIL_SERVER, port, timeout=10)
+                
+                try:
+                    if MAIL_USE_TLS:
+                        app.logger.info("Starting TLS...")
+                        server.starttls()
+                    
+                    app.logger.info(f"Logging in with {MAIL_USERNAME}...")
+                    server.login(MAIL_USERNAME, MAIL_PASSWORD)
+                    
+                    app.logger.info(f"Sending email...")
+                    server.sendmail(MAIL_DEFAULT_SENDER, [to_email], msg.as_string())
+                    
+                    app.logger.info(f"Email sent successfully to {to_email} using port {port}")
+                    return True
+                finally:
+                    try:
+                        server.quit()
+                    except:
+                        pass
+            except Exception as e:
+                last_error = e
+                app.logger.warning(f"Failed on port {port}: {str(e)}")
+                continue
+        
+        # If we get here, all ports failed
+        app.logger.error(f"All SMTP ports failed. Last error: {str(last_error)}")
+        return False
                 
     except smtplib.SMTPAuthenticationError as e:
         app.logger.error(f"SMTP Authentication failed: {str(e)}")

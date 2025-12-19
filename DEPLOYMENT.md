@@ -168,6 +168,40 @@ pip install -r requirements.txt
 pip install psycopg2-binary
 ```
 
+### 8.5. Configure Email (Mailgun)
+
+InventoryApp requires email functionality for password resets and employee invitations.
+
+**Get Mailgun SMTP credentials:**
+1. Sign up at [Mailgun.com](https://mailgun.com)
+2. Create a domain (or use sandbox)
+3. Go to **Sending → Domain Settings**
+4. Note your SMTP credentials:
+   - **SMTP Host:** `smtp.mailgun.org`
+   - **SMTP Port:** `587` (or `2525` if 587 is blocked)
+   - **SMTP Username:** Your Mailgun SMTP username
+   - **SMTP Password:** Your Mailgun SMTP password
+   - **Default Sender:** `noreply@yourdomain.com`
+
+**Add to your .env file:**
+```bash
+# Email Configuration
+MAIL_SERVER=smtp.mailgun.org
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=postmaster@yourdomain.mailgun.org
+MAIL_PASSWORD=your-mailgun-smtp-password
+MAIL_DEFAULT_SENDER=noreply@yourdomain.com
+```
+
+**Test email sending:**
+```bash
+# After starting backend, test email
+curl -X POST http://localhost:8000/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"your-test-email@example.com"}'
+```
+
 ### 9. Configure Environment
 
 ```bash
