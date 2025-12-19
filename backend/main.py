@@ -23,7 +23,7 @@ from sqlalchemy import func
 import os
 
 # Endpoint for manager to list their invitations
-@app.route('/api/manager/invitations', methods=['GET'])
+@app.route('/manager/invitations', methods=['GET'])
 @jwt_required()
 def list_invitations():
     user_id = get_jwt_identity()
@@ -40,7 +40,7 @@ def list_invitations():
     ]})
 
 # Endpoint for manager to invite employee by email
-@app.route('/api/manager/invite-employee', methods=['POST'])
+@app.route('/manager/invite-employee', methods=['POST'])
 @jwt_required()
 def invite_employee():
     user_id = int(get_jwt_identity())
@@ -69,7 +69,7 @@ def invite_employee():
     return jsonify({'message': 'Invitation sent'})
 
 # Endpoint for employee to accept invitation (no auth required)
-@app.route('/api/accept-invitation/<token>', methods=['GET'])
+@app.route('/accept-invitation/<token>', methods=['GET'])
 def accept_invitation(token):
     invitation = ManagerInvitation.query.filter_by(token=token, accepted=False).first()
     if not invitation:
@@ -98,7 +98,7 @@ def accept_invitation(token):
     return redirect(f"{frontend}/dashboard?invite=accepted")
 
 # Endpoint for employee to decline invitation (no auth required)
-@app.route('/api/decline-invitation/<token>', methods=['GET'])
+@app.route('/decline-invitation/<token>', methods=['GET'])
 def decline_invitation(token):
     invitation = ManagerInvitation.query.filter_by(token=token).first()
     frontend = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
@@ -116,7 +116,7 @@ def decline_invitation(token):
     return redirect(f"{frontend}/dashboard?invite=denied")
 
 # Endpoint for default user to request manager role
-@app.route('/api/request-manager', methods=['POST'])
+@app.route('/request-manager', methods=['POST'])
 @jwt_required()
 def request_manager():
     user_id = int(get_jwt_identity())

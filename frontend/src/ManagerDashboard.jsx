@@ -45,7 +45,7 @@ function ManagerDashboard() {
 
   const fetchInvitations = async () => {
     try {
-      const res = await fetch('/api/manager/invitations', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/manager/invitations`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       })
       const data = await res.json()
@@ -57,7 +57,7 @@ function ManagerDashboard() {
 
   const handleInvite = async () => {
     setInviteStatus('Sending...')
-    const res = await fetch('/api/manager/invite-employee', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/manager/invite-employee`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ email: inviteEmail })
