@@ -115,6 +115,21 @@ def decline_invitation(token):
         db.session.commit()
     return redirect(f"{frontend}/dashboard?invite=denied")
 
+# Endpoint for default user to request manager role
+@app.route('/api/request-manager', methods=['POST'])
+@jwt_required()
+def request_manager():
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.role != 'default':
+        return jsonify({'error': 'Only default users can become managers'}), 400
+    user.role = 'manager'
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'message': 'You are now a manager', 'user': user.to_json()})
+
 # JWT error handlers
 @app.errorhandler(422)
 def handle_unprocessable_entity(e):
