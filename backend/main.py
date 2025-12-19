@@ -260,33 +260,68 @@ class PasswordResetToken(db.Model):
 def send_email(to_email, subject, body):
     # Use environment variables for config (MAIL_*)
     import os
-    MAIL_SERVER = os.environ.get('MAIL_SERVER')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1','true','yes')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
+    import smtplib
+    from email.mime.text import MIMEText
     
-    app.logger.info(f"Email config - Server: {MAIL_SERVER}, Port: {MAIL_PORT}, Username: {MAIL_USERNAME}, TLS: {MAIL_USE_TLS}")
-    
-    if not (MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD):
-        app.logger.error(f'SMTP config missing - Server: {MAIL_SERVER}, Username: {MAIL_USERNAME}, Password: {"***" if MAIL_PASSWORD else "MISSING"}')
-        return False
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = MAIL_DEFAULT_SENDER
-    msg['To'] = to_email
     try:
+        MAIL_SERVER = os.environ.get('MAIL_SERVER')
+        MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+        MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+        MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+        MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1','true','yes')
+        MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
+        
+        app.logger.info(f"Email config - Server: {MAIL_SERVER}, Port: {MAIL_PORT}, Username: {MAIL_USERNAME}, TLS: {MAIL_USE_TLS}")
+        
+        if not (MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD):
+            app.logger.error(f'SMTP config missing - Server: {MAIL_SERVER}, Username: {MAIL_USERNAME}, Password: {"***" if MAIL_PASSWORD else "MISSING"}')
+            return False
+        
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = MAIL_DEFAULT_SENDER
+        msg['To'] = to_email
+        
         app.logger.info(f"Attempting to send email to {to_email} via {MAIL_SERVER}:{MAIL_PORT}")
-        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+        
+        # Create SMTP connection with timeout
+        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=10)
+        
+        try:
             if MAIL_USE_TLS:
+                app.logger.info("Starting TLS...")
                 server.starttls()
+            
+            app.logger.info(f"Logging in with {MAIL_USERNAME}...")
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            
+            app.logger.info(f"Sending email...")
             server.sendmail(MAIL_DEFAULT_SENDER, [to_email], msg.as_string())
-        app.logger.info(f"Email sent successfully to {to_email}")
-        return True
+            
+            app.logger.info(f"Email sent successfully to {to_email}")
+            return True
+        finally:
+            try:
+                server.quit()
+            except:
+                pass
+                
+    except smtplib.SMTPAuthenticationError as e:
+        app.logger.error(f"SMTP Authentication failed: {str(e)}")
+        return False
+    except smtplib.SMTPException as e:
+        app.logger.error(f"SMTP error: {type(e).__name__}: {str(e)}")
+        return False
+    except ConnectionError as e:
+        app.logger.error(f"Connection error: {str(e)}")
+        return False
+    except TimeoutError as e:
+        app.logger.error(f"Connection timeout: {str(e)}")
+        return False
     except Exception as e:
         app.logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}")
+        import traceback
+        app.logger.error(traceback.format_exc())
         return False
 
 @app.route('/auth/forgot-password', methods=['POST'])
