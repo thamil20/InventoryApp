@@ -562,9 +562,30 @@ def admin_user_detail(target_id):
             return (jsonify({"message": "User updated", "user": user.to_json()}), 200)
 
         if request.method == 'DELETE':
+            # Delete all related records first to avoid foreign key constraint errors
+            
+            # Delete employee permissions where user is manager or employee
+            EmployeePermission.query.filter(
+                (EmployeePermission.manager_id == target_id) | 
+                (EmployeePermission.employee_id == target_id)
+            ).delete()
+            
+            # Delete manager invitations sent by this user
+            ManagerInvitation.query.filter_by(manager_id=target_id).delete()
+            
+            # Delete all inventory items for this user
+            Current_Inventory.query.filter_by(user_id=target_id).delete()
+            
+            # Delete all sold items for this user
+            Sold_Items.query.filter_by(user_id=target_id).delete()
+            
+            # Delete all export records for this user
+            DataExport.query.filter_by(user_id=target_id).delete()
+            
+            # Finally delete the user
             db.session.delete(user)
             db.session.commit()
-            return (jsonify({"message": "User deleted"}), 200)
+            return (jsonify({"message": "User and all associated data deleted"}), 200)
 
     except Exception as e:
         app.logger.error(f"Error in admin user detail: {str(e)}")
